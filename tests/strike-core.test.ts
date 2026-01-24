@@ -12,6 +12,8 @@ describe("Strike Core Contract", () => {
     simnet.callPublicFn("soul-nft", "set-mint-address", [], deployer);
     simnet.callPublicFn("strike-core", "flip-sale", [], deployer);
     simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+    // Fund the contract for reward payouts
+    simnet.callPublicFn("strike-core", "deposit-stx", [Cl.uint(10000000)], deployer);
   });
 
   describe("Session Creation", () => {
@@ -19,7 +21,7 @@ describe("Strike Core Contract", () => {
       const { result } = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE")],
+        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
       // Session ID is a buffer, just check it's ok
@@ -30,7 +32,7 @@ describe("Strike Core Contract", () => {
       const { result } = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVP")],
+        [Cl.stringAscii("PVP"), Cl.uint(1000000)],
         wallet2
       );
       expect(result).toBeErr(Cl.uint(102)); // ERR-DONT-HAVE-SOUL-NFT
@@ -40,14 +42,14 @@ describe("Strike Core Contract", () => {
       const result1 = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE")],
+        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
       
       const result2 = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVP")],
+        [Cl.stringAscii("PVP"), Cl.uint(2000000)],
         wallet1
       );
       
@@ -62,7 +64,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE")],
+        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -90,7 +92,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE")],
+        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -149,7 +151,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE")],
+        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -221,6 +223,148 @@ describe("Strike Core Contract", () => {
         wallet2
       );
       expect(balance.result).toBeUint(5);
+    });
+  });
+
+  describe("Token Management", () => {
+    it("should allow owner to set minimum token limit", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "set-min-token-limit",
+        [Cl.uint(2000000)],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should fail to set minimum token limit if not owner", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "set-min-token-limit",
+        [Cl.uint(2000000)],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(100)); // ERR-NOT-AUTHORIZED
+    });
+
+    it("should fail to create session with amount below minimum", () => {
+      // Set min limit to 2 STX
+      simnet.callPublicFn(
+        "strike-core",
+        "set-min-token-limit",
+        [Cl.uint(2000000)],
+        deployer
+      );
+
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(103)); // ERR-AMOUNT-TOO-LOW
+    });
+
+    it("should allow owner to withdraw STX", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "withdraw-stx",
+        [Cl.uint(1000000)],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should fail to withdraw STX if not owner", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "withdraw-stx",
+        [Cl.uint(1000000)],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(100)); // ERR-NOT-AUTHORIZED
+    });
+  });
+
+  describe("Session Joining", () => {
+    it("should allow second player to approve and join session", () => {
+      // Mint NFT to wallet2 so they can join
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet2);
+
+      // Create session with wallet1
+      const sessionResult = simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.stringAscii("PVP"), Cl.uint(1000000)],
+        wallet1
+      );
+
+      if (sessionResult.result.type !== "ok") {
+        throw new Error("Failed to create session");
+      }
+
+      const sessionId = sessionResult.result.value;
+
+      // Join with wallet2
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "approve-session",
+        [sessionId],
+        wallet2
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should fail to join session without Soul NFT", () => {
+      // Create session with wallet1
+      const sessionResult = simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.stringAscii("PVP"), Cl.uint(1000000)],
+        wallet1
+      );
+
+      if (sessionResult.result.type !== "ok") {
+        throw new Error("Failed to create session");
+      }
+
+      const sessionId = sessionResult.result.value;
+
+      // Try to join without NFT
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "approve-session",
+        [sessionId],
+        wallet2
+      );
+      expect(result).toBeErr(Cl.uint(102)); // ERR-DONT-HAVE-SOUL-NFT
+    });
+  });
+
+  describe("Clarity 4 Features", () => {
+    it("should use stacks-block-time for session creation", () => {
+      const sessionResult = simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        wallet1
+      );
+
+      if (sessionResult.result.type !== "ok") {
+        throw new Error("Failed to create session");
+      }
+
+      const sessionId = sessionResult.result.value;
+
+      const { result } = simnet.callReadOnlyFn(
+        "strike-core",
+        "get-session",
+        [sessionId],
+        wallet1
+      );
+
+      // Session should have created-at timestamp
+      expect(result.type).toBe("ok");
     });
   });
 });

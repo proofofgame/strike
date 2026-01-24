@@ -64,26 +64,29 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: commission-trait
-            emulated-sender: SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5
-            path: ".\\.cache/requirements/SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5.commission-trait.clar"
-            clarity-version: 2
-        - emulated-contract-publish:
             contract-name: nft-trait
             emulated-sender: SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9
             path: ".\\.cache/requirements/SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.clar"
             clarity-version: 1
-      epoch: "2.1"
+      epoch: "2.0"
     - id: 1
+      transactions:
+        - emulated-contract-publish:
+            contract-name: commission-trait
+            emulated-sender: SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5
+            path: ".\\.cache/requirements/SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5.commission-trait.clar"
+            clarity-version: 2
+      epoch: "2.1"
+    - id: 2
       transactions:
         - emulated-contract-publish:
             contract-name: soul-nft
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/soul-nft.clar
-            clarity-version: 3
+            clarity-version: 4
         - emulated-contract-publish:
             contract-name: strike-core
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/strike-core.clar
-            clarity-version: 3
-      epoch: "3.2"
+            clarity-version: 4
+      epoch: "3.3"

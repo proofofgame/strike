@@ -13,13 +13,13 @@ contract_id = 'SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5.commission-trait'
 
 [contracts.soul-nft]
 path = 'contracts/soul-nft.clar'
-clarity_version = 3
-epoch = 'latest'
+clarity_version = 4
+epoch = '3.3'
 
 [contracts.strike-core]
 path = 'contracts/strike-core.clar'
-clarity_version = 3
-epoch = 'latest'
+clarity_version = 4
+epoch = '3.3'
 
 [repl.analysis]
 passes = ['check_checker']
