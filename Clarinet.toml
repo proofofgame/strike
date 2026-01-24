@@ -4,11 +4,23 @@ description = ''
 authors = []
 telemetry = false
 cache_dir = '.\.cache'
-requirements = []
+
+[[project.requirements]]
+contract_id = 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait'
+
+[[project.requirements]]
+contract_id = 'SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5.commission-trait'
+
+[contracts.soul-nft]
+path = 'contracts/soul-nft.clar'
+clarity_version = 3
+epoch = 'latest'
+
 [contracts.strike-core]
 path = 'contracts/strike-core.clar'
 clarity_version = 3
 epoch = 'latest'
+
 [repl.analysis]
 passes = ['check_checker']
 
