@@ -11,6 +11,7 @@
 (define-constant ERR-INVALID-WINNER (err u105))
 (define-constant ERR-SESSION-ALREADY-FINALIZED (err u106))
 (define-constant ERR-INSUFFICIENT-BALANCE (err u107))
+(define-constant ERR-NFT-ON-COOLDOWN (err u108))
 
 ;; Variables
 (define-data-var sale-active bool false)
@@ -91,10 +92,12 @@
   (ok true)))
 
 ;; Create a new session
-(define-public (create-session (mode (string-ascii 20)) (amount uint))
+(define-public (create-session (nft-id uint) (mode (string-ascii 20)) (amount uint))
   (begin
     (asserts! (>= amount (var-get min-token-limit)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
+    (asserts! (unwrap! (can-use-nft nft-id) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
+    (try! (contract-call? .soul-nft update-last-used nft-id))
     (try! (stx-transfer? amount tx-sender current-contract))
     (let 
       (
@@ -120,10 +123,12 @@
 )
 
 ;; Create a session and auto-finalize with contract as opponent
-(define-public (create-session-by-default (mode (string-ascii 20)) (amount uint))
+(define-public (create-session-by-default (nft-id uint) (mode (string-ascii 20)) (amount uint))
   (begin
     (asserts! (>= amount (var-get min-token-limit)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
+    (asserts! (unwrap! (can-use-nft nft-id) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
+    (try! (contract-call? .soul-nft update-last-used nft-id))
     (try! (stx-transfer? amount tx-sender current-contract))
     (let 
       (
@@ -148,7 +153,7 @@
       (var-set session-counter (+ counter u1))
       (print session-data)
       (unwrap! (as-contract? ((with-stx amount))
-        (unwrap-panic (approve-session session-id))
+        (unwrap-panic (approve-session nft-id session-id))
       ) ERR-NOT-AUTHORIZED)
       (try! (finalize-session session-id random-hash tx-sender))
       (ok session-id)
@@ -157,7 +162,7 @@
 )
 
 ;; Approve and join a session
-(define-public (approve-session (session-id (buff 32)))
+(define-public (approve-session (nft-id uint) (session-id (buff 32)))
   (let
     (
       (session (unwrap! (map-get? sessions session-id) ERR-SESSION-NOT-FOUND))
@@ -165,6 +170,8 @@
       (updated-session (merge session { opponent: (some tx-sender) }))
     )
     (try! (has-soul-nft tx-sender))
+    (asserts! (unwrap! (can-use-nft nft-id) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
+    (try! (contract-call? .soul-nft update-last-used nft-id))
     (try! (stx-transfer? bet tx-sender current-contract))
     (map-set sessions session-id updated-session)
     (ok true)
@@ -201,7 +208,7 @@
   )
 )
 
-;; Check if account has soul NFT
+;; Check if account has Soul NFT
 (define-read-only (has-soul-nft (account principal))
   (let ((balance (contract-call? .soul-nft get-balance account)))
     (if (> balance u0)
@@ -216,6 +223,13 @@
 (define-read-only (get-finalized-session (session-id (buff 32)))
   (ok (map-get? finalized-sessions session-id)))
 
+;; Check if NFT can be used (24 hours cooldown)
+(define-read-only (can-use-nft (nft-id uint))
+  (let ((last-used-opt (unwrap! (contract-call? .soul-nft get-last-used nft-id) (ok true))))
+    (match last-used-opt
+      last-used-time (ok (>= (- stacks-block-time last-used-time) u86400))
+      (ok true))))
+
 ;; Internal - Mint NFT via public
 (define-private (claim)
   (begin
@@ -223,7 +237,7 @@
     (try! (contract-call? .soul-nft mint tx-sender))
   (ok true)))
 
-;; Internal - Send SIP-010 tokens to winner player in claim function for tokens NFTs
+;; Internal - Send SIP-010 tokens to winner player
 (define-private (send-stx-to-winner (player principal) (amount uint))
   (begin
     (unwrap! (as-contract? ((with-stx amount))

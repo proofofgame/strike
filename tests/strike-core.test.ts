@@ -21,7 +21,7 @@ describe("Strike Core Contract", () => {
       const { result } = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
       // Session ID is a buffer, just check it's ok
@@ -32,24 +32,30 @@ describe("Strike Core Contract", () => {
       const { result } = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVP"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVP"), Cl.uint(1000000)],
         wallet2
       );
       expect(result).toBeErr(Cl.uint(102)); // ERR-DONT-HAVE-SOUL-NFT
     });
 
     it("should increment session counter", () => {
+      // Mine blocks to pass cooldown
+      simnet.mineEmptyBlocks(17280); // 24 hours worth of blocks
+      
       const result1 = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
+      
+      // Mine more blocks
+      simnet.mineEmptyBlocks(17280);
       
       const result2 = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVP"), Cl.uint(2000000)],
+        [Cl.uint(1), Cl.stringAscii("PVP"), Cl.uint(2000000)],
         wallet1
       );
       
@@ -64,7 +70,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -92,7 +98,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -151,7 +157,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -259,7 +265,7 @@ describe("Strike Core Contract", () => {
       const { result } = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
       expect(result).toBeErr(Cl.uint(103)); // ERR-AMOUNT-TOO-LOW
@@ -295,7 +301,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVP"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVP"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -309,7 +315,7 @@ describe("Strike Core Contract", () => {
       const { result } = simnet.callPublicFn(
         "strike-core",
         "approve-session",
-        [sessionId],
+        [Cl.uint(2), sessionId],
         wallet2
       );
       expect(result).toBeOk(Cl.bool(true));
@@ -320,7 +326,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVP"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVP"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -334,7 +340,7 @@ describe("Strike Core Contract", () => {
       const { result } = simnet.callPublicFn(
         "strike-core",
         "approve-session",
-        [sessionId],
+        [Cl.uint(1), sessionId],
         wallet2
       );
       expect(result).toBeErr(Cl.uint(102)); // ERR-DONT-HAVE-SOUL-NFT
@@ -346,7 +352,7 @@ describe("Strike Core Contract", () => {
       const sessionResult = simnet.callPublicFn(
         "strike-core",
         "create-session",
-        [Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
         wallet1
       );
 
@@ -364,6 +370,59 @@ describe("Strike Core Contract", () => {
       );
 
       // Session should have created-at timestamp
+      expect(result.type).toBe("ok");
+    });
+  });
+
+  describe("NFT Cooldown", () => {
+    it("should check if NFT can be used", () => {
+      const { result } = simnet.callReadOnlyFn(
+        "strike-core",
+        "can-use-nft",
+        [Cl.uint(1)],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should fail to create session if NFT is on cooldown", () => {
+      // Create first session
+      simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        wallet1
+      );
+
+      // Try to create second session immediately (should fail)
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(108)); // ERR-NFT-ON-COOLDOWN
+    });
+
+    it("should allow session creation after 24 hours", () => {
+      // Create first session
+      simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        wallet1
+      );
+
+      // Mine blocks to simulate 24 hours (86400 seconds / 5 seconds per block = 17280 blocks)
+      simnet.mineEmptyBlocks(17280);
+
+      // Try to create second session (should succeed)
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.uint(1), Cl.stringAscii("PVE"), Cl.uint(1000000)],
+        wallet1
+      );
       expect(result.type).toBe("ok");
     });
   });

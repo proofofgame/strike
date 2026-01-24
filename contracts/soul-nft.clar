@@ -12,6 +12,14 @@
 (define-map token-count principal uint)
 (define-map market uint {price: uint, commission: principal})
 (define-map mint-address bool principal)
+(define-map nft-equipment uint {
+  slot-1: (optional uint),
+  slot-2: (optional uint),
+  slot-3: (optional uint),
+  slot-4: (optional uint),
+  slot-5: (optional uint),
+  last-used: uint
+})
 
 ;; Constants and Errors
 (define-constant CONTRACT-OWNER tx-sender)
@@ -22,6 +30,7 @@
 (define-constant ERR-METADATA-FROZEN (err u204))
 (define-constant ERR-MINT-ALREADY-SET (err u205))
 (define-constant ERR-LISTING (err u206))
+(define-constant ERR-INVALID-SLOT (err u207))
 
 ;; Variables
 (define-data-var last-id uint u0)
@@ -39,7 +48,8 @@
   (begin
     (asserts! (is-eq tx-sender sender) ERR-NOT-AUTHORIZED)
     (asserts! (is-none (map-get? market id)) ERR-LISTING)
-    (trnsfr id sender recipient)))
+    (try! (trnsfr id sender recipient))
+    (ok true)))
 
 ;; Get the owner of the specified token ID
 (define-read-only (get-owner (id uint))
@@ -160,3 +170,76 @@
     (map-delete market id)
     (print {a: "buy-in-ustx", id: id})
     (ok true)))
+
+;; Equipment Management Functions
+(define-public (set-equipment (nft-id uint) (slot-1 (optional uint)) (slot-2 (optional uint)) (slot-3 (optional uint)) (slot-4 (optional uint)) (slot-5 (optional uint)))
+  (let ((owner (unwrap! (nft-get-owner? soul-nft nft-id) ERR-NOT-FOUND)))
+    (asserts! (is-eq tx-sender owner) ERR-NOT-AUTHORIZED)
+    (ok (map-set nft-equipment nft-id {
+      slot-1: slot-1,
+      slot-2: slot-2,
+      slot-3: slot-3,
+      slot-4: slot-4,
+      slot-5: slot-5,
+      last-used: stacks-block-time
+    }))))
+
+(define-public (equip-slot (nft-id uint) (slot uint) (item-id (optional uint)))
+  (let ((owner (unwrap! (nft-get-owner? soul-nft nft-id) ERR-NOT-FOUND))
+        (current-equipment (default-to {
+          slot-1: none,
+          slot-2: none,
+          slot-3: none,
+          slot-4: none,
+          slot-5: none,
+          last-used: u0
+        } (map-get? nft-equipment nft-id))))
+    (asserts! (is-eq tx-sender owner) ERR-NOT-AUTHORIZED)
+    (asserts! (and (>= slot u1) (<= slot u5)) ERR-INVALID-SLOT)
+    (ok (map-set nft-equipment nft-id
+      (if (is-eq slot u1)
+        (merge current-equipment {slot-1: item-id})
+        (if (is-eq slot u2)
+          (merge current-equipment {slot-2: item-id})
+          (if (is-eq slot u3)
+            (merge current-equipment {slot-3: item-id})
+            (if (is-eq slot u4)
+              (merge current-equipment {slot-4: item-id})
+              (merge current-equipment {slot-5: item-id})))))))))
+
+(define-public (update-last-used (nft-id uint))
+  (let ((owner (unwrap! (nft-get-owner? soul-nft nft-id) ERR-NOT-FOUND))
+        (current-equipment (default-to {
+          slot-1: none,
+          slot-2: none,
+          slot-3: none,
+          slot-4: none,
+          slot-5: none,
+          last-used: u0
+        } (map-get? nft-equipment nft-id))))
+    (asserts! (is-eq tx-sender owner) ERR-NOT-AUTHORIZED)
+    (ok (map-set nft-equipment nft-id (merge current-equipment {last-used: stacks-block-time})))))
+
+(define-read-only (get-equipment (nft-id uint))
+  (ok (map-get? nft-equipment nft-id)))
+
+(define-read-only (get-slot (nft-id uint) (slot uint))
+  (let ((equipment (map-get? nft-equipment nft-id)))
+    (ok (if (is-some equipment)
+      (if (is-eq slot u1)
+        (get slot-1 (unwrap-panic equipment))
+        (if (is-eq slot u2)
+          (get slot-2 (unwrap-panic equipment))
+          (if (is-eq slot u3)
+            (get slot-3 (unwrap-panic equipment))
+            (if (is-eq slot u4)
+              (get slot-4 (unwrap-panic equipment))
+              (if (is-eq slot u5)
+                (get slot-5 (unwrap-panic equipment))
+                none)))))
+      none))))
+
+(define-read-only (get-last-used (nft-id uint))
+  (ok (match (map-get? nft-equipment nft-id)
+    equipment (some (get last-used equipment))
+    none)))

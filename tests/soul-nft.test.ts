@@ -227,4 +227,154 @@ describe("Soul NFT Contract", () => {
       expect(result).toBeErr(Cl.uint(204)); // ERR-METADATA-FROZEN
     });
   });
+
+  describe("Equipment Management", () => {
+    it("should set equipment for NFT", () => {
+      // Mint NFT first
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+
+      const { result } = simnet.callPublicFn(
+        "soul-nft",
+        "set-equipment",
+        [
+          Cl.uint(1),
+          Cl.some(Cl.uint(10)),
+          Cl.some(Cl.uint(20)),
+          Cl.none(),
+          Cl.none(),
+          Cl.none()
+        ],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should fail to set equipment for non-owned NFT", () => {
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+
+      const { result } = simnet.callPublicFn(
+        "soul-nft",
+        "set-equipment",
+        [
+          Cl.uint(1),
+          Cl.some(Cl.uint(10)),
+          Cl.none(),
+          Cl.none(),
+          Cl.none(),
+          Cl.none()
+        ],
+        wallet2
+      );
+      expect(result).toBeErr(Cl.uint(202)); // ERR-NOT-AUTHORIZED
+    });
+
+    it("should equip item to specific slot", () => {
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+
+      const { result } = simnet.callPublicFn(
+        "soul-nft",
+        "equip-slot",
+        [Cl.uint(1), Cl.uint(1), Cl.some(Cl.uint(100))],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should fail to equip invalid slot", () => {
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+
+      const { result } = simnet.callPublicFn(
+        "soul-nft",
+        "equip-slot",
+        [Cl.uint(1), Cl.uint(10), Cl.some(Cl.uint(100))],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(207)); // ERR-INVALID-SLOT
+    });
+
+    it("should update last-used timestamp", () => {
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+
+      const { result } = simnet.callPublicFn(
+        "soul-nft",
+        "update-last-used",
+        [Cl.uint(1)],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should get equipment data", () => {
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn(
+        "soul-nft",
+        "set-equipment",
+        [
+          Cl.uint(1),
+          Cl.some(Cl.uint(10)),
+          Cl.some(Cl.uint(20)),
+          Cl.none(),
+          Cl.none(),
+          Cl.none()
+        ],
+        wallet1
+      );
+
+      const { result } = simnet.callReadOnlyFn(
+        "soul-nft",
+        "get-equipment",
+        [Cl.uint(1)],
+        wallet1
+      );
+      expect(result.type).toBe("ok");
+    });
+
+    it("should get specific slot data", () => {
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn(
+        "soul-nft",
+        "equip-slot",
+        [Cl.uint(1), Cl.uint(1), Cl.some(Cl.uint(100))],
+        wallet1
+      );
+
+      const { result } = simnet.callReadOnlyFn(
+        "soul-nft",
+        "get-slot",
+        [Cl.uint(1), Cl.uint(1)],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.some(Cl.uint(100)));
+    });
+
+    it("should get last-used timestamp", () => {
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn(
+        "soul-nft",
+        "update-last-used",
+        [Cl.uint(1)],
+        wallet1
+      );
+
+      const { result } = simnet.callReadOnlyFn(
+        "soul-nft",
+        "get-last-used",
+        [Cl.uint(1)],
+        wallet1
+      );
+      expect(result.type).toBe("ok");
+    });
+
+    it("should return none for never used NFT", () => {
+      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+
+      const { result } = simnet.callReadOnlyFn(
+        "soul-nft",
+        "get-last-used",
+        [Cl.uint(1)],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.none());
+    });
+  });
 });
