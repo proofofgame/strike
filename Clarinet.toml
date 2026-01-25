@@ -11,6 +11,9 @@ contract_id = 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait'
 [[project.requirements]]
 contract_id = 'SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5.commission-trait'
 
+[[project.requirements]]
+contract_id = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token'
+
 [contracts.soul-nft]
 path = 'contracts/soul-nft.clar'
 clarity_version = 4
