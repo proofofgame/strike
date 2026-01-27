@@ -1,5 +1,8 @@
 # Strike - NFT-Gated Gaming Platform
 
+[![codecov](https://codecov.io/gh/proofofgame/strike/branch/main/graph/badge.svg)](https://codecov.io/gh/proofofgame/strike)
+[![Tests](https://github.com/proofofgame/strike/actions/workflows/codecov.yml/badge.svg)](https://github.com/proofofgame/strike/actions/workflows/codecov.yml)
+
 A blockchain-based gaming platform built on Stacks, featuring NFT-gated access and session-based gameplay with STX and sBTC rewards.
 
 ## Key Features
@@ -361,17 +364,6 @@ NFT contract with marketplace functionality implementing SIP-009 standard.
 - **ERR-MINT-ALREADY-SET** (u205): Mint address already configured
 - **ERR-LISTING** (u206): NFT listing error
 - **ERR-INVALID-SLOT** (u207): Slot number must be 1-5
-
-#### Error Codes
-
-- `200` - ERR-SOLD-OUT: Mint limit reached
-- `201` - ERR-WRONG-COMMISSION: Commission contract mismatch
-- `202` - ERR-NOT-AUTHORIZED: Caller not authorized
-- `203` - ERR-NOT-FOUND: NFT not found
-- `204` - ERR-METADATA-FROZEN: Metadata cannot be changed
-- `205` - ERR-MINT-ALREADY-SET: Mint address already configured
-- `206` - ERR-LISTING: NFT listing error
-- `207` - ERR-INVALID-SLOT: Slot number must be 1-5
 
 ## Development
 
