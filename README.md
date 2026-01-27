@@ -30,8 +30,9 @@ A blockchain-based gaming platform built on Stacks, featuring NFT-gated access a
 - **PvE (Player vs Environment)**: Auto-finalized sessions with contract as opponent
 - **PvP (Player vs Player)**: Two-player competitive sessions
 - **Tournament Mode**: Multi-player tournament support
+- **Owner-Only Finalization**: Only contract owner can finalize sessions (centralized control for moderation)
 - Session cancellation before opponent joins (with full refund)
-- Minimum bet enforcement (default: 1 STX)
+- Minimum bet enforcement (default: 1 STX for STX sessions, 10 sBTC for sBTC sessions)
 - 90% reward distribution to winners, 10% platform fees
 - Session data includes timestamps, participants, and currency type tracking
 
@@ -86,7 +87,7 @@ Core contract for managing game sessions and NFT-gated access.
 
 **finalize-session** `(session-id (buff 32)) (resulthash (buff 32)) (winner principal)`
 - Finalizes a STX game session with results
-- Only creator or opponent can finalize
+- **Only contract owner can finalize** (centralized moderation control)
 - For PvE: reward = 90% of single bet
 - For PvP: reward = 90% of combined pot (2x bet)
 - Sends reward to winner using `as-contract?` with STX allowance
@@ -128,9 +129,10 @@ Core contract for managing game sessions and NFT-gated access.
 
 **finalize-session-sbtc** `(session-id (buff 32)) (resulthash (buff 32)) (winner principal)`
 - Finalizes an sBTC game session
+- **Only contract owner can finalize** (centralized moderation control)
 - Same logic as STX version but with sBTC transfers
 - Uses SIP-010 transfer with memo parameter
-- Accumulates fees to total-fees (STX equivalent)
+- Accumulates fees to total-fees-sbtc (separate from STX fees)
 - Returns success
 
 **cancel-session-with-sbtc** `(session-id (buff 32))`
@@ -165,11 +167,18 @@ Core contract for managing game sessions and NFT-gated access.
 - Transfers to owner with memo parameter
 
 **withdraw-fees** `(amount uint)`
-- Withdraws accumulated platform fees (only owner)
-- Fees collected from all sessions (10% of pots)
+- Withdraws accumulated STX platform fees (only owner)
+- Fees collected from STX sessions (10% of pots)
 - Deducts from total-fees counter
 - Checks sufficient fee balance
 - Transfers STX to owner
+
+**withdraw-fees-sbtc** `(amount uint)`
+- Withdraws accumulated sBTC platform fees (only owner)
+- Fees collected from sBTC sessions (10% of pots)
+- Deducts from total-fees-sbtc counter
+- Checks sufficient sBTC fee balance
+- Transfers sBTC to owner using SIP-010
 
 **General Functions:**
 
@@ -186,9 +195,15 @@ Core contract for managing game sessions and NFT-gated access.
 - Returns new sale state
 
 **set-min-token-limit** `(limit uint)`
-- Sets minimum bet amount for creating sessions (only contract owner)
+- Sets minimum bet amount for STX sessions (only contract owner)
 - Prevents sessions with stakes below platform minimum
 - Example: `(set-min-token-limit u1000000)` for 1 STX minimum
+
+**set-min-token-limit-sbtc** `(limit uint)`
+- Sets minimum bet amount for sBTC sessions (only contract owner)
+- Prevents sBTC sessions with stakes below platform minimum
+- Default: u1000000000 (10 sBTC)
+- Example: `(set-min-token-limit-sbtc u1000000000)` for 10 sBTC minimum
 
 **set-mint-address**
 - Registers soul-nft contract as authorized minter
@@ -217,8 +232,13 @@ Core contract for managing game sessions and NFT-gated access.
 - Returns result hash, winner, and reward amount
 
 **get-total-fees**
-- Returns accumulated platform fees from all sessions
-- Represents 10% of all finalized session pots
+- Returns accumulated STX platform fees
+- Represents 10% of all finalized STX session pots
+- Available for owner withdrawal
+
+**get-total-fees-sbtc**
+- Returns accumulated sBTC platform fees
+- Represents 10% of all finalized sBTC session pots
 - Available for owner withdrawal
 
 **sale-enabled**
@@ -226,8 +246,12 @@ Core contract for managing game sessions and NFT-gated access.
 - Returns current sale state
 
 **get-min-token-limit**
-- Returns current minimum bet amount
+- Returns current minimum bet amount for STX sessions
 - Default: u1000000 (1 STX)
+
+**get-min-token-limit-sbtc**
+- Returns current minimum bet amount for sBTC sessions
+- Default: u1000000000 (10 sBTC)
 
 **can-use-nft** `(nft-id uint) (owner principal)`
 - Checks if NFT is owned by specified principal and off cooldown
@@ -249,6 +273,50 @@ Core contract for managing game sessions and NFT-gated access.
 - **ERR-NFT-ON-COOLDOWN** (u108): NFT cannot be used yet (24 hour cooldown)
 - **ERR-INVALID-MODE** (u109): Invalid session mode specified
 - **ERR-CANNOT-CANCEL** (u110): Cannot cancel session (opponent already joined)
+
+#### Private (Internal) Functions
+
+**claim**
+- Internal helper for NFT minting
+- Validates sale is active
+- Calls soul-nft mint function
+- Used by claim-one and claim-five
+
+**send-stx-to-winner** `(player principal) (amount uint)`
+- Internal helper for STX reward distribution
+- Transfers STX from contract to winner
+- Uses `as-contract?` with STX allowance
+- Called by finalize-session and finalize-session-internal
+
+**send-sbtc-to-winner** `(player principal) (amount uint)`
+- Internal helper for sBTC reward distribution
+- Transfers sBTC from contract to winner via SIP-010
+- Uses `as-contract?` with FT allowance
+- Called by finalize-session-sbtc and finalize-session-sbtc-internal
+
+**approve-session-internal** `(session-id (buff 32))`
+- Internal session approval for auto-finalization
+- Sets contract as opponent without NFT validation
+- Used by create-session-by-default for PvE mode
+- Bypasses cooldown and NFT ownership checks
+
+**approve-session-internal-sbtc** `(session-id (buff 32))`
+- Internal sBTC session approval for auto-finalization
+- Sets contract as opponent without NFT validation
+- Used by create-session-by-default-with-sbtc for PvE mode
+- Bypasses cooldown and NFT ownership checks
+
+**finalize-session-internal** `(session-id (buff 32)) (resulthash (buff 32)) (winner principal)`
+- Internal session finalization for auto-finalized PvE
+- Same logic as finalize-session but without owner check
+- Accumulates fees to total-fees
+- Used by create-session-by-default
+
+**finalize-session-sbtc-internal** `(session-id (buff 32)) (resulthash (buff 32)) (winner principal)`
+- Internal sBTC session finalization for auto-finalized PvE
+- Same logic as finalize-session-sbtc but without owner check
+- Accumulates fees to total-fees-sbtc
+- Used by create-session-by-default-with-sbtc
 
 ---
 
@@ -383,29 +451,41 @@ clarinet --version
 # Check contracts (Clarity 4 syntax)
 clarinet check
 
-# Run test suite (78 tests total)
+# Run test suite (86 tests: 84 passed, 2 skipped)
 npm test
+
+# Run with coverage report
+npm run test:report
 ```
 
 ### Test Coverage
 
-**strike-core.test.ts** (55 tests):
+**strike-core.test.ts** (63 tests: 61 passed, 2 skipped):
 - Session creation with STX and sBTC
 - Session finalization with PvE/PvP reward calculation
+- **Owner-only finalization security** (CONTRACT-OWNER restriction)
 - NFT claiming (single and batch)
 - Token management (deposit/withdraw STX and sBTC)
+- **sBTC minimum token limit management** (set/get)
+- **sBTC fee management** (separate tracking and withdrawal)
 - Session joining and approval
-- Session cancellation with refunds
-- Fee management and withdrawal
+- Session cancellation with STX and sBTC refunds
+- Fee management and withdrawal (STX and sBTC separate)
 - NFT cooldown validation (24-hour mechanism)
 - Clarity 4 feature validation (stacks-block-time)
 - Mode validation
 - Authorization checks
 - Withdrawal security and balance checks
-- PvE auto-finalization
+- PvE auto-finalization with STX and sBTC
 - Finalization security and validation
 - Multiple NFT management
 - Read-only function verification
+
+**Skipped Tests (2):**
+- sBTC session creation test (requires wallet sBTC balance in simnet)
+- sBTC session cancellation test (requires wallet sBTC balance in simnet)
+
+*Note: Skipped tests require testnet/mainnet deployment for full sBTC integration testing due to simnet limitations with external contract administrative functions.*
 
 **soul-nft.test.ts** (23 tests):
 - NFT minting and transfers
