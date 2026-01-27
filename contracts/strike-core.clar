@@ -19,7 +19,9 @@
 (define-data-var sale-active bool false)
 (define-data-var session-counter uint u0)
 (define-data-var min-token-limit uint u1000000)
+(define-data-var min-token-limit-sbtc uint u1000000000)
 (define-data-var total-fees uint u0)
+(define-data-var total-fees-sbtc uint u0)
 
 ;; Storage
 (define-map sessions 
@@ -47,6 +49,55 @@
 (define-read-only (sale-enabled)
   (ok (var-get sale-active)))
 
+;; Check if account has Soul NFT
+(define-read-only (has-soul-nft (account principal))
+  (let ((balance (contract-call? .soul-nft get-balance account)))
+    (if (> balance u0)
+      (ok true)
+      ERR-DONT-HAVE-SOUL-NFT)))
+
+;; Get session data by session-id
+(define-read-only (get-session (session-id (buff 32)))
+  (ok (map-get? sessions session-id)))
+
+;; Get finalized session data by session-id
+(define-read-only (get-finalized-session (session-id (buff 32)))
+  (ok (map-get? finalized-sessions session-id)))
+
+;; Check if NFT can be used (24 hours cooldown)
+(define-read-only (can-use-nft (nft-id uint) (owner principal))
+  (let 
+    (
+      (nft-owner-opt (unwrap! (contract-call? .soul-nft get-owner nft-id) (err false)))
+      (last-used-opt (unwrap! (contract-call? .soul-nft get-last-used nft-id) (err false)))
+    )
+    (match nft-owner-opt
+      nft-owner 
+        (if (is-eq nft-owner owner)
+          (match last-used-opt
+            last-used-time (ok (>= (- stacks-block-time last-used-time) u86400))
+            (ok true))
+          (err false))
+      (err false)
+    )
+  ))
+
+;; Get total accumulated fees
+(define-read-only (get-total-fees)
+  (var-get total-fees))
+
+;; Get total accumulated sBTC fees
+(define-read-only (get-total-fees-sbtc)
+  (var-get total-fees-sbtc))
+
+;; Get minimum STX token limit
+(define-read-only (get-min-token-limit)
+  (var-get min-token-limit))
+
+;; Get minimum sBTC token limit
+(define-read-only (get-min-token-limit-sbtc)
+  (var-get min-token-limit-sbtc))
+
 ;; Set public sale flag (only contract owner)
 (define-public (flip-sale)
   (begin
@@ -59,6 +110,13 @@
   (begin
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (var-set min-token-limit new-limit)
+    (ok true)))
+
+;; Set minimum sBTC token limit (only contract owner)
+(define-public (set-min-token-limit-sbtc (new-limit uint))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
+    (var-set min-token-limit-sbtc new-limit)
     (ok true)))
 
 ;; Deposit STX to contract (only contract owner)
@@ -105,6 +163,18 @@
     (var-set total-fees (- (var-get total-fees) amount))
     (unwrap! (as-contract? ((with-stx amount))
       (unwrap-panic (stx-transfer? amount tx-sender CONTRACT-OWNER))
+    ) ERR-NOT-AUTHORIZED)
+    (ok true)
+  ))
+
+;; Withdrawal accumulated sBTC fees (only contract owner)
+(define-public (withdraw-fees-sbtc (amount uint))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
+    (asserts! (>= (var-get total-fees-sbtc) amount) ERR-INSUFFICIENT-BALANCE)
+    (var-set total-fees-sbtc (- (var-get total-fees-sbtc) amount))
+    (unwrap! (as-contract? ((with-ft 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token "sbtc-token" amount))
+      (unwrap-panic (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer amount tx-sender CONTRACT-OWNER (some 0x)))
     ) ERR-NOT-AUTHORIZED)
     (ok true)
   ))
@@ -190,8 +260,8 @@
       (map-set sessions session-id session-data)
       (var-set session-counter (+ counter u1))
       (print session-data)
-      (try! (approve-session-internal session-id amount))
-      (try! (finalize-session session-id random-hash tx-sender))
+      (try! (approve-session-internal session-id))
+      (try! (finalize-session-internal session-id random-hash tx-sender))
       (ok session-id)
     )
   )
@@ -200,7 +270,7 @@
 (define-public (create-session-with-sbtc (nft-id uint) (mode (string-ascii 20)) (amount uint))
   (begin
     (asserts! (or (is-eq mode "PvP") (or (is-eq mode "PvE") (is-eq mode "Tournament"))) ERR-INVALID-MODE)
-    (asserts! (>= amount (var-get min-token-limit)) ERR-AMOUNT-TOO-LOW)
+    (asserts! (>= amount (var-get min-token-limit-sbtc)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
     (asserts! (unwrap! (can-use-nft nft-id tx-sender) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
     (try! (contract-call? .soul-nft update-last-used nft-id))
@@ -232,7 +302,7 @@
 (define-public (create-session-by-default-with-sbtc (nft-id uint) (mode (string-ascii 20)) (amount uint))
   (begin
     (asserts! (or (is-eq mode "PvP") (or (is-eq mode "PvE") (is-eq mode "Tournament"))) ERR-INVALID-MODE)
-    (asserts! (>= amount (var-get min-token-limit)) ERR-AMOUNT-TOO-LOW)
+    (asserts! (>= amount (var-get min-token-limit-sbtc)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
     (asserts! (unwrap! (can-use-nft nft-id tx-sender) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
     (try! (contract-call? .soul-nft update-last-used nft-id))
@@ -260,8 +330,8 @@
       (map-set sessions session-id session-data)
       (var-set session-counter (+ counter u1))
       (print session-data)
-      (try! (approve-session-internal-sbtc session-id amount))
-      (try! (finalize-session-sbtc session-id random-hash tx-sender))
+      (try! (approve-session-internal-sbtc session-id))
+      (try! (finalize-session-sbtc-internal session-id random-hash tx-sender))
       (ok session-id)
     )
   )
@@ -323,10 +393,6 @@
       (total-pot (if is-pve bet (* bet u2)))
       (reward (/ (* total-pot u90) u100))
       (fee (- total-pot reward))
-      (is-valid-caller (or (is-eq tx-sender creator)
-                           (match opponent
-                             opp (is-eq tx-sender opp)
-                             false)))
       (is-valid-winner (or (is-eq winner creator) 
                            (match opponent 
                              opp (is-eq winner opp)
@@ -339,7 +405,7 @@
       })
     )
     (asserts! (is-none already-finalized) ERR-SESSION-ALREADY-FINALIZED)
-    (asserts! is-valid-caller ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! is-valid-winner ERR-INVALID-WINNER)
     (asserts! (>= (stx-get-balance current-contract) reward) ERR-INSUFFICIENT-BALANCE)
     (var-set total-fees (+ (var-get total-fees) fee))
@@ -364,10 +430,6 @@
       (total-pot (if is-pve bet (* bet u2)))
       (reward (/ (* total-pot u90) u100))
       (fee (- total-pot reward))
-      (is-valid-caller (or (is-eq tx-sender creator)
-                           (match opponent
-                             opp (is-eq tx-sender opp)
-                             false)))
       (is-valid-winner (or (is-eq winner creator) 
                            (match opponent 
                              opp (is-eq winner opp)
@@ -380,10 +442,10 @@
       })
     )
     (asserts! (is-none already-finalized) ERR-SESSION-ALREADY-FINALIZED)
-    (asserts! is-valid-caller ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! is-valid-winner ERR-INVALID-WINNER)
     (asserts! (>= (unwrap-panic (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance current-contract)) reward) ERR-INSUFFICIENT-BALANCE)
-    (var-set total-fees (+ (var-get total-fees) fee))
+    (var-set total-fees-sbtc (+ (var-get total-fees-sbtc) fee))
     (map-set finalized-sessions session-id finalize-data)
     (try! (send-sbtc-to-winner winner reward))
     (print finalize-data)
@@ -435,43 +497,6 @@
   )
 )
 
-;; Check if account has Soul NFT
-(define-read-only (has-soul-nft (account principal))
-  (let ((balance (contract-call? .soul-nft get-balance account)))
-    (if (> balance u0)
-      (ok true)
-      ERR-DONT-HAVE-SOUL-NFT)))
-
-;; Get session data by session-id
-(define-read-only (get-session (session-id (buff 32)))
-  (ok (map-get? sessions session-id)))
-
-;; Get finalized session data by session-id
-(define-read-only (get-finalized-session (session-id (buff 32)))
-  (ok (map-get? finalized-sessions session-id)))
-
-;; Check if NFT can be used (24 hours cooldown)
-(define-read-only (can-use-nft (nft-id uint) (owner principal))
-  (let 
-    (
-      (nft-owner-opt (unwrap! (contract-call? .soul-nft get-owner nft-id) (err false)))
-      (last-used-opt (unwrap! (contract-call? .soul-nft get-last-used nft-id) (err false)))
-    )
-    (match nft-owner-opt
-      nft-owner 
-        (if (is-eq nft-owner owner)
-          (match last-used-opt
-            last-used-time (ok (>= (- stacks-block-time last-used-time) u86400))
-            (ok true))
-          (err false))
-      (err false)
-    )
-  ))
-
-;; Get total accumulated fees
-(define-read-only (get-total-fees)
-  (var-get total-fees))
-
 ;; Internal - Mint NFT via public
 (define-private (claim)
   (begin
@@ -498,7 +523,7 @@
   ))
 
 ;; Internal - Approve session without NFT checks (for auto-finalization)
-(define-private (approve-session-internal (session-id (buff 32)) (bet uint))
+(define-private (approve-session-internal (session-id (buff 32)))
   (let
     (
       (session (unwrap! (map-get? sessions session-id) ERR-SESSION-NOT-FOUND))
@@ -510,13 +535,83 @@
 )
 
 ;; Internal - Approve session with sBTC without NFT checks (for auto-finalization)
-(define-private (approve-session-internal-sbtc (session-id (buff 32)) (bet uint))
+(define-private (approve-session-internal-sbtc (session-id (buff 32)))
   (let
     (
       (session (unwrap! (map-get? sessions session-id) ERR-SESSION-NOT-FOUND))
       (updated-session (merge session { opponent: (some current-contract) }))
     )
     (map-set sessions session-id updated-session)
+    (ok true)
+  )
+)
+
+;; Internal - Finalize session without owner check (for auto-finalization)
+(define-private (finalize-session-internal (session-id (buff 32)) (resulthash (buff 32)) (winner principal))
+  (let 
+    (
+      (session (unwrap! (map-get? sessions session-id) ERR-SESSION-NOT-FOUND))
+      (already-finalized (map-get? finalized-sessions session-id))
+      (creator (get creator session))
+      (opponent (get opponent session))
+      (bet (get bet session))
+      (is-pve (match opponent opp (is-eq opp current-contract) false))
+      (total-pot (if is-pve bet (* bet u2)))
+      (reward (/ (* total-pot u90) u100))
+      (fee (- total-pot reward))
+      (is-valid-winner (or (is-eq winner creator) 
+                           (match opponent 
+                             opp (is-eq winner opp)
+                             false)))
+      (finalize-data {
+        session-id: session-id,
+        resulthash: resulthash,
+        winner: winner,
+        reward: reward
+      })
+    )
+    (asserts! (is-none already-finalized) ERR-SESSION-ALREADY-FINALIZED)
+    (asserts! is-valid-winner ERR-INVALID-WINNER)
+    (asserts! (>= (stx-get-balance current-contract) reward) ERR-INSUFFICIENT-BALANCE)
+    (var-set total-fees (+ (var-get total-fees) fee))
+    (map-set finalized-sessions session-id finalize-data)
+    (try! (send-stx-to-winner winner reward))
+    (print finalize-data)
+    (ok true)
+  )
+)
+
+;; Internal - Finalize sBTC session without owner check (for auto-finalization)
+(define-private (finalize-session-sbtc-internal (session-id (buff 32)) (resulthash (buff 32)) (winner principal))
+  (let 
+    (
+      (session (unwrap! (map-get? sessions session-id) ERR-SESSION-NOT-FOUND))
+      (already-finalized (map-get? finalized-sessions session-id))
+      (creator (get creator session))
+      (opponent (get opponent session))
+      (bet (get bet session))
+      (is-pve (match opponent opp (is-eq opp current-contract) false))
+      (total-pot (if is-pve bet (* bet u2)))
+      (reward (/ (* total-pot u90) u100))
+      (fee (- total-pot reward))
+      (is-valid-winner (or (is-eq winner creator) 
+                           (match opponent 
+                             opp (is-eq winner opp)
+                             false)))
+      (finalize-data {
+        session-id: session-id,
+        resulthash: resulthash,
+        winner: winner,
+        reward: reward
+      })
+    )
+    (asserts! (is-none already-finalized) ERR-SESSION-ALREADY-FINALIZED)
+    (asserts! is-valid-winner ERR-INVALID-WINNER)
+    (asserts! (>= (unwrap-panic (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance current-contract)) reward) ERR-INSUFFICIENT-BALANCE)
+    (var-set total-fees-sbtc (+ (var-get total-fees-sbtc) fee))
+    (map-set finalized-sessions session-id finalize-data)
+    (try! (send-sbtc-to-winner winner reward))
+    (print finalize-data)
     (ok true)
   )
 )
