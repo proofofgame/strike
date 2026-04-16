@@ -8,7 +8,8 @@ const wallet2 = accounts.get("wallet_2")!;
 
 describe("Soul NFT Contract", () => {
   beforeEach(() => {
-    // Register strike-core as mint address and enable sale
+    // Enable base functionality gate, register strike-core as mint address and enable sale
+    simnet.callPublicFn("strike-core", "flip-gate", [], deployer);
     simnet.callPublicFn("soul-nft", "set-mint-address", [], deployer);
     simnet.callPublicFn("strike-core", "flip-sale", [], deployer);
   });

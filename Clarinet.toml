@@ -19,6 +19,11 @@ path = 'contracts/soul-nft.clar'
 clarity_version = 4
 epoch = '3.3'
 
+[contracts.raid-pass]
+path = 'contracts/raid-pass.clar'
+clarity_version = 4
+epoch = '3.3'
+
 [contracts.strike-core]
 path = 'contracts/strike-core.clar'
 clarity_version = 4

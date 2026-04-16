@@ -7,6 +7,25 @@ A blockchain-based gaming platform built on Stacks, featuring NFT-gated access a
 
 ## Key Features
 
+### Gate System
+- **Base functionality gate** (`gate-active`) controls access to all contract functions
+- `flip-gate` toggle — owner-only, the only function that works without the gate
+- All public functions require gate to be open (`ERR-GATE-CLOSED u111`)
+- Allows safe contract deployment and maintenance windows
+
+### Raid System
+- **Raid gate** (`raid-active`) controls access to raid participation functions
+- `flip-raid` toggle — owner-only, independent from the base gate
+- `enter` and `claim-raid-pass` require raid to be active (`ERR-GATE-CLOSED u111`)
+- Allows separate control of raid events without affecting core gameplay
+
+### Raid Pass System
+- **Enter**: Any user can call `enter` to register as a raid participant (requires raid active)
+- **Raid Pass NFT**: Registered users can claim a Raid Pass NFT (1 per principal)
+- `raid-pass-users` map tracks who entered the strike
+- `claim-raid-pass` checks registration and mints via `.raid-pass` contract
+- Raid Pass has separate mint limit (500) and error code range (u300+)
+
 ### Multi-Currency Support
 - **STX Sessions**: Native Stacks token for betting and rewards
 - **sBTC Sessions**: Bitcoin-backed token support via SIP-010
@@ -180,22 +199,50 @@ Core contract for managing game sessions and NFT-gated access.
 - Checks sufficient sBTC fee balance
 - Transfers sBTC to owner using SIP-010
 
+**Gate & Entry Functions:**
+
+**flip-gate**
+- Toggles base functionality gate on/off (only contract owner)
+- The only function that works without the gate being open
+- All other core public functions require gate to be active
+- Returns new gate state
+
+**flip-raid**
+- Toggles raid participation gate on/off (only contract owner)
+- Independent from the base `gate-active` flag
+- Controls access to `enter` and `claim-raid-pass`
+- Returns new raid state
+
+**enter**
+- Registers caller as a raid participant in `raid-pass-users` map
+- Requires raid to be active (`ERR-GATE-CLOSED u111`)
+- Prints "Entry confirmed"
+- Available to any user
+
+**claim-raid-pass**
+- Mints 1 Raid Pass NFT to caller
+- Requires raid to be active (`ERR-GATE-CLOSED u111`)
+- Requires caller to have entered via `enter` (`ERR-NOT-IN-RAID u112`)
+- Calls `.raid-pass mint` — limited to 1 per principal (`ERR-ALREADY-MINTED u307`)
+
 **General Functions:**
 
 **claim-one**
 - Mints 1 Soul NFT to caller
-- Requires sale to be active
+- Requires gate to be active and sale to be active
 
 **claim-five**
 - Mints 5 Soul NFTs to caller in batch
-- Requires sale to be active
+- Requires gate to be active and sale to be active
 
 **flip-sale**
 - Toggles public sale state (only contract owner)
+- Requires gate to be active
 - Returns new sale state
 
 **set-min-token-limit** `(limit uint)`
 - Sets minimum bet amount for STX sessions (only contract owner)
+- Requires gate to be active
 - Prevents sessions with stakes below platform minimum
 - Example: `(set-min-token-limit u1000000)` for 1 STX minimum
 
@@ -241,6 +288,13 @@ Core contract for managing game sessions and NFT-gated access.
 - Represents 10% of all finalized sBTC session pots
 - Available for owner withdrawal
 
+**gate-enabled**
+- Returns current gate state (true = open, false = closed)
+
+**raid-enabled**
+- Returns current raid state (true = open, false = closed)
+- Independent from `gate-enabled`
+
 **sale-enabled**
 - Checks if public sale is currently active
 - Returns current sale state
@@ -273,6 +327,9 @@ Core contract for managing game sessions and NFT-gated access.
 - **ERR-NFT-ON-COOLDOWN** (u108): NFT cannot be used yet (24 hour cooldown)
 - **ERR-INVALID-MODE** (u109): Invalid session mode specified
 - **ERR-CANNOT-CANCEL** (u110): Cannot cancel session (opponent already joined)
+- **ERR-GATE-CLOSED** (u111): Base functionality gate is not active
+- **ERR-NOT-IN-RAID** (u112): Caller has not entered the raid via `enter`
+- **ERR-RAID-NOT-ACTIVE** (u113): Raid participation gate is not active
 
 #### Private (Internal) Functions
 
@@ -317,6 +374,76 @@ Core contract for managing game sessions and NFT-gated access.
 - Same logic as finalize-session-sbtc but without owner check
 - Accumulates fees to total-fees-sbtc
 - Used by create-session-by-default-with-sbtc
+
+---
+
+### raid-pass.clar
+
+Raid Pass NFT contract implementing SIP-009 standard. Limited to 1 per principal, 500 total supply.
+
+#### Public Functions
+
+**mint** `(new-owner principal)`
+- Mints new Raid Pass NFT to specified owner
+- Can only be called from authorized mint contract (strike-core)
+- Enforces mint limit (500)
+- Enforces 1-per-principal limit (`ERR-ALREADY-MINTED u307`)
+- Increments token counter
+
+**transfer** `(id uint) (sender principal) (recipient principal)`
+- Transfers NFT from sender to recipient
+- Requires caller to be the sender
+- Prevents transfer of listed NFTs
+
+**set-base-uri** `(new-base-uri (string-ascii 80))`
+- Updates base URI for token metadata (only contract owner)
+- Cannot be changed if metadata is frozen
+
+**set-mint-limit** `(limit uint)`
+- Sets maximum mintable supply (only contract owner)
+
+**freeze-metadata**
+- Permanently locks metadata URI (only contract owner)
+- Irreversible operation
+
+**set-mint-address**
+- Registers authorized minting contract
+- Can only be set once
+- Set at deploy time by strike-core
+
+**list-in-ustx** `(id uint) (price uint) (comm <commission-trait>)`
+- Lists NFT for sale on marketplace
+
+**unlist-in-ustx** `(id uint)`
+- Removes NFT from marketplace
+
+**buy-in-ustx** `(id uint) (comm <commission-trait>)`
+- Purchases listed NFT
+
+#### Read-Only Functions
+
+**get-balance** `(account principal)` — Returns number of Raid Pass NFTs owned
+
+**get-owner** `(id uint)` — Returns owner of specified token ID
+
+**get-last-token-id** — Returns most recently minted token ID
+
+**get-token-uri** `(token-id uint)` — Returns metadata URI
+
+**get-mint-limit** — Returns maximum mintable supply (default: 500)
+
+**get-listing-in-ustx** `(id uint)` — Returns marketplace listing details
+
+#### Error Codes
+
+- **ERR-SOLD-OUT** (u300): Mint limit reached
+- **ERR-WRONG-COMMISSION** (u301): Commission contract mismatch
+- **ERR-NOT-AUTHORIZED** (u302): Caller not authorized
+- **ERR-NOT-FOUND** (u303): NFT not found
+- **ERR-METADATA-FROZEN** (u304): Metadata cannot be changed
+- **ERR-MINT-ALREADY-SET** (u305): Mint address already configured
+- **ERR-LISTING** (u306): NFT listing error
+- **ERR-ALREADY-MINTED** (u307): Principal already has a Raid Pass
 
 ---
 
@@ -451,7 +578,7 @@ clarinet --version
 # Check contracts (Clarity 4 syntax)
 clarinet check
 
-# Run test suite (86 tests: 84 passed, 2 skipped)
+# Run test suite (133 tests: 131 passed, 2 skipped)
 npm test
 
 # Run with coverage report
@@ -460,7 +587,10 @@ npm run test:report
 
 ### Test Coverage
 
-**strike-core.test.ts** (63 tests: 61 passed, 2 skipped):
+**strike-core.test.ts** (77 tests: 75 passed, 2 skipped):
+- **Gate management** (flip-gate toggle, owner-only, gate-closed blocking)
+- **Raid management** (raid-enabled check, flip-raid toggle, owner-only, block enter when closed, block claim-raid-pass when closed)
+- **Enter & Raid Pass** (enter, multi-user enter, claim-raid-pass, fail without enter, 1-per-principal limit)
 - Session creation with STX and sBTC
 - Session finalization with PvE/PvP reward calculation
 - **Owner-only finalization security** (CONTRACT-OWNER restriction)
@@ -486,6 +616,17 @@ npm run test:report
 - sBTC session cancellation test (requires wallet sBTC balance in simnet)
 
 *Note: Skipped tests require testnet/mainnet deployment for full sBTC integration testing due to simnet limitations with external contract administrative functions.*
+
+**raid-pass.test.ts** (33 tests):
+- NFT minting via enter → claim-raid-pass flow
+- 1-per-principal mint limit enforcement
+- Mint limit (sold out) enforcement
+- Transfer and balance updates
+- Marketplace listing/unlisting/purchase
+- Metadata URI management and freeze
+- Mint address registration (set at deploy)
+- Mint limit configuration and authorization
+- Read-only function verification
 
 **soul-nft.test.ts** (23 tests):
 - NFT minting and transfers

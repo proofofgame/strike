@@ -98,6 +98,11 @@ plan:
     - id: 3
       transactions:
         - emulated-contract-publish:
+            contract-name: raid-pass
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/raid-pass.clar
+            clarity-version: 4
+        - emulated-contract-publish:
             contract-name: soul-nft
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/soul-nft.clar

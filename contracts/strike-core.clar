@@ -14,9 +14,14 @@
 (define-constant ERR-NFT-ON-COOLDOWN (err u108))
 (define-constant ERR-INVALID-MODE (err u109))
 (define-constant ERR-CANNOT-CANCEL (err u110))
+(define-constant ERR-GATE-CLOSED (err u111))
+(define-constant ERR-NOT-IN-RAID (err u112))
+(define-constant ERR-RAID-NOT-ACTIVE (err u113))
 
 ;; Variables
 (define-data-var sale-active bool false)
+(define-data-var gate-active bool false)
+(define-data-var raid-active bool false)
 (define-data-var session-counter uint u0)
 (define-data-var min-token-limit uint u1000000)
 (define-data-var min-token-limit-sbtc uint u1000000000)
@@ -44,6 +49,16 @@
     winner: principal,
     reward: uint
   })
+
+(define-map raid-pass-users principal bool)
+
+;; Check gate status
+(define-read-only (gate-enabled)
+  (ok (var-get gate-active)))
+
+;; Check raid status
+(define-read-only (raid-enabled)
+  (ok (var-get raid-active)))
 
 ;; Check public sales active
 (define-read-only (sale-enabled)
@@ -98,9 +113,24 @@
 (define-read-only (get-min-token-limit-sbtc)
   (var-get min-token-limit-sbtc))
 
+;; Toggle base functionality gate (only contract owner)
+(define-public (flip-gate)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
+    (var-set gate-active (not (var-get gate-active)))
+    (ok (var-get gate-active))))
+
+;; Toggle raid participation (only contract owner)
+(define-public (flip-raid)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
+    (var-set raid-active (not (var-get raid-active)))
+    (ok (var-get raid-active))))
+
 ;; Set public sale flag (only contract owner)
 (define-public (flip-sale)
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (var-set sale-active (not (var-get sale-active)))
     (ok (var-get sale-active))))
@@ -108,6 +138,7 @@
 ;; Set minimum token limit (only contract owner)
 (define-public (set-min-token-limit (new-limit uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (var-set min-token-limit new-limit)
     (ok true)))
@@ -115,6 +146,7 @@
 ;; Set minimum sBTC token limit (only contract owner)
 (define-public (set-min-token-limit-sbtc (new-limit uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (var-set min-token-limit-sbtc new-limit)
     (ok true)))
@@ -122,6 +154,7 @@
 ;; Deposit STX to contract (only contract owner)
 (define-public (deposit-stx (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (try! (stx-transfer? amount tx-sender current-contract))
   (ok true)))
@@ -129,6 +162,7 @@
 ;; Deposit sBTC to contract (only contract owner)
 (define-public (deposit-sbtc (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer amount tx-sender current-contract (some 0x)))
     (ok true)))
@@ -136,6 +170,7 @@
 ;; Withdrawal STX from contract (only contract owner)
 (define-public (withdraw-stx (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! (>= (stx-get-balance current-contract) amount) ERR-INSUFFICIENT-BALANCE)
     (unwrap! (as-contract? ((with-stx amount))
@@ -147,6 +182,7 @@
 ;; Withdrawal sBTC from contract (only contract owner)
 (define-public (withdraw-sbtc (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! (>= (unwrap-panic (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance current-contract)) amount) ERR-INSUFFICIENT-BALANCE)
     (unwrap! (as-contract? ((with-ft 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token "sbtc-token" amount))
@@ -158,6 +194,7 @@
 ;; Withdrawal accumulated fees (only contract owner)
 (define-public (withdraw-fees (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! (>= (var-get total-fees) amount) ERR-INSUFFICIENT-BALANCE)
     (var-set total-fees (- (var-get total-fees) amount))
@@ -170,6 +207,7 @@
 ;; Withdrawal accumulated sBTC fees (only contract owner)
 (define-public (withdraw-fees-sbtc (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! (>= (var-get total-fees-sbtc) amount) ERR-INSUFFICIENT-BALANCE)
     (var-set total-fees-sbtc (- (var-get total-fees-sbtc) amount))
@@ -179,15 +217,33 @@
     (ok true)
   ))
 
+;; Enter the strike
+(define-public (enter)
+  (begin
+    (asserts! (var-get raid-active) ERR-GATE-CLOSED)
+    (map-set raid-pass-users tx-sender true)
+    (print "Entry confirmed")
+    (ok true)))
+
+;; Claim Pass NFT
+(define-public (claim-raid-pass)
+  (begin
+    (asserts! (var-get raid-active) ERR-GATE-CLOSED)
+    (asserts! (default-to false (map-get? raid-pass-users tx-sender)) ERR-NOT-IN-RAID)
+    (try! (contract-call? .raid-pass mint tx-sender))
+  (ok true)))
+
 ;; Claim 1 NFT
 (define-public (claim-one)
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (try! (claim))
   (ok true)))
 
 ;; Claim 5 NFT
 (define-public (claim-five)
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (try! (claim))
     (try! (claim))
     (try! (claim))
@@ -198,6 +254,7 @@
 ;; Create a new session
 (define-public (create-session (nft-id uint) (mode (string-ascii 20)) (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (or (is-eq mode "PvP") (or (is-eq mode "PvE") (is-eq mode "Tournament"))) ERR-INVALID-MODE)
     (asserts! (>= amount (var-get min-token-limit)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
@@ -231,6 +288,7 @@
 ;; Create a session and auto-finalize with contract as opponent
 (define-public (create-session-by-default (nft-id uint) (mode (string-ascii 20)) (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (or (is-eq mode "PvP") (or (is-eq mode "PvE") (is-eq mode "Tournament"))) ERR-INVALID-MODE)
     (asserts! (>= amount (var-get min-token-limit)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
@@ -269,6 +327,7 @@
 ;; Create a new session with sBTC
 (define-public (create-session-with-sbtc (nft-id uint) (mode (string-ascii 20)) (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (or (is-eq mode "PvP") (or (is-eq mode "PvE") (is-eq mode "Tournament"))) ERR-INVALID-MODE)
     (asserts! (>= amount (var-get min-token-limit-sbtc)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
@@ -301,6 +360,7 @@
 ;; Create a session and auto-finalize with contract as opponent (using sBTC)
 (define-public (create-session-by-default-with-sbtc (nft-id uint) (mode (string-ascii 20)) (amount uint))
   (begin
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (or (is-eq mode "PvP") (or (is-eq mode "PvE") (is-eq mode "Tournament"))) ERR-INVALID-MODE)
     (asserts! (>= amount (var-get min-token-limit-sbtc)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
@@ -347,6 +407,7 @@
       (opponent (get opponent session))
       (updated-session (merge session { opponent: (some tx-sender) }))
     )
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-none opponent) ERR-SESSION-ALREADY-FINALIZED)
     (asserts! (not (is-eq tx-sender creator)) ERR-NOT-AUTHORIZED)
     (try! (has-soul-nft tx-sender))
@@ -368,6 +429,7 @@
       (opponent (get opponent session))
       (updated-session (merge session { opponent: (some tx-sender) }))
     )
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-none opponent) ERR-SESSION-ALREADY-FINALIZED)
     (asserts! (not (is-eq tx-sender creator)) ERR-NOT-AUTHORIZED)
     (try! (has-soul-nft tx-sender))
@@ -404,6 +466,7 @@
         reward: reward
       })
     )
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-none already-finalized) ERR-SESSION-ALREADY-FINALIZED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! is-valid-winner ERR-INVALID-WINNER)
@@ -441,6 +504,7 @@
         reward: reward
       })
     )
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-none already-finalized) ERR-SESSION-ALREADY-FINALIZED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! is-valid-winner ERR-INVALID-WINNER)
@@ -463,6 +527,7 @@
       (bet (get bet session))
       (already-finalized (map-get? finalized-sessions session-id))
     )
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
     (asserts! (is-none already-finalized) ERR-SESSION-ALREADY-FINALIZED)
     (asserts! (is-none opponent) ERR-CANNOT-CANCEL)
@@ -485,6 +550,7 @@
       (bet (get bet session))
       (already-finalized (map-get? finalized-sessions session-id))
     )
+    (asserts! (var-get gate-active) ERR-GATE-CLOSED)
     (asserts! (is-eq tx-sender creator) ERR-NOT-AUTHORIZED)
     (asserts! (is-none already-finalized) ERR-SESSION-ALREADY-FINALIZED)
     (asserts! (is-none opponent) ERR-CANNOT-CANCEL)
@@ -619,4 +685,8 @@
 ;; Register this contract as allowed to mint
 (unwrap-panic (as-contract? ((with-all-assets-unsafe))
   (unwrap-panic (contract-call? .soul-nft set-mint-address))
+))
+
+(unwrap-panic (as-contract? ((with-all-assets-unsafe))
+  (unwrap-panic (contract-call? .raid-pass set-mint-address))
 ))

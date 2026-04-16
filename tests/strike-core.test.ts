@@ -8,6 +8,8 @@ const wallet2 = accounts.get("wallet_2")!;
 
 describe("Strike Core Contract", () => {
   beforeEach(() => {
+    // Enable base functionality gate
+    simnet.callPublicFn("strike-core", "flip-gate", [], deployer);
     // Register strike-core as mint address, enable sale, and mint NFT to wallet1
     simnet.callPublicFn("soul-nft", "set-mint-address", [], deployer);
     simnet.callPublicFn("strike-core", "flip-sale", [], deployer);
@@ -209,7 +211,66 @@ describe("Strike Core Contract", () => {
         [],
         wallet1
       );
+      expect(result).toBeErr(Cl.uint(100)); // ERR-NOT-AUTHORIZED (gate is already active from beforeEach)
+    });
+  });
+
+  describe("Gate Management", () => {
+    it("should check gate status", () => {
+      const { result } = simnet.callReadOnlyFn(
+        "strike-core",
+        "gate-enabled",
+        [],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true)); // true because flip-gate was called in beforeEach
+    });
+
+    it("should toggle gate state", () => {
+      // Gate is currently true from beforeEach, toggle to false
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "flip-gate",
+        [],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(false));
+    });
+
+    it("should fail to flip gate if not owner", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "flip-gate",
+        [],
+        wallet1
+      );
       expect(result).toBeErr(Cl.uint(100)); // ERR-NOT-AUTHORIZED
+    });
+
+    it("should block all functions when gate is closed", () => {
+      // Close the gate
+      simnet.callPublicFn("strike-core", "flip-gate", [], deployer);
+
+      // flip-sale should fail
+      const flipSale = simnet.callPublicFn("strike-core", "flip-sale", [], deployer);
+      expect(flipSale.result).toBeErr(Cl.uint(111)); // ERR-GATE-CLOSED
+
+      // deposit-stx should fail
+      const deposit = simnet.callPublicFn("strike-core", "deposit-stx", [Cl.uint(1000000)], deployer);
+      expect(deposit.result).toBeErr(Cl.uint(111));
+
+      // create-session should fail
+      const session = simnet.callPublicFn(
+        "strike-core",
+        "create-session",
+        [Cl.uint(1), Cl.stringAscii("PvE"), Cl.uint(1000000)],
+        wallet1
+      );
+      expect(session.result).toBeErr(Cl.uint(111));
+
+      // claim-one should fail
+      const claim = simnet.callPublicFn("strike-core", "claim-one", [], wallet2);
+      expect(claim.result).toBeErr(Cl.uint(111));
     });
   });
 
@@ -1321,6 +1382,130 @@ describe("Strike Core Contract", () => {
         deployer
       );
       expect(result).toBeErr(Cl.uint(107)); // ERR-INSUFFICIENT-BALANCE
+    });
+  });
+
+  describe("Raid Management", () => {
+    it("should check raid status", () => {
+      const { result } = simnet.callReadOnlyFn(
+        "strike-core",
+        "raid-enabled",
+        [],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(false)); // false by default
+    });
+
+    it("should toggle raid state", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "flip-raid",
+        [],
+        deployer
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should fail to flip raid if not owner", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "flip-raid",
+        [],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(100)); // ERR-NOT-AUTHORIZED
+    });
+
+    it("should block enter when raid is closed", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "enter",
+        [],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(111)); // ERR-GATE-CLOSED (raid not active)
+    });
+
+    it("should block claim-raid-pass when raid is closed", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "claim-raid-pass",
+        [],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(111)); // ERR-GATE-CLOSED (raid not active)
+    });
+  });
+
+  describe("Enter & Raid Pass", () => {
+    beforeEach(() => {
+      // Enable raid participation
+      simnet.callPublicFn("strike-core", "flip-raid", [], deployer);
+    });
+
+    it("should allow any user to enter the strike", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "enter",
+        [],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+    });
+
+    it("should allow multiple users to enter", () => {
+      const r1 = simnet.callPublicFn("strike-core", "enter", [], wallet1);
+      const r2 = simnet.callPublicFn("strike-core", "enter", [], wallet2);
+      expect(r1.result).toBeOk(Cl.bool(true));
+      expect(r2.result).toBeOk(Cl.bool(true));
+    });
+
+    it("should claim raid-pass after entering", () => {
+      // Enter first
+      simnet.callPublicFn("strike-core", "enter", [], wallet1);
+
+      // Claim raid pass
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "claim-raid-pass",
+        [],
+        wallet1
+      );
+      expect(result).toBeOk(Cl.bool(true));
+
+      // Check balance
+      const balance = simnet.callReadOnlyFn(
+        "raid-pass",
+        "get-balance",
+        [Cl.principal(wallet1)],
+        wallet1
+      );
+      expect(balance.result).toBeUint(1);
+    });
+
+    it("should fail to claim raid-pass without entering first", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "claim-raid-pass",
+        [],
+        wallet2
+      );
+      expect(result).toBeErr(Cl.uint(112)); // ERR-NOT-IN-RAID
+    });
+
+    it("should fail to claim two raid-passes (1 per principal)", () => {
+      // Enter and claim first
+      simnet.callPublicFn("strike-core", "enter", [], wallet1);
+      simnet.callPublicFn("strike-core", "claim-raid-pass", [], wallet1);
+
+      // Try to claim second
+      const { result } = simnet.callPublicFn(
+        "strike-core",
+        "claim-raid-pass",
+        [],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(307)); // ERR-ALREADY-MINTED
     });
   });
 });
