@@ -11,4 +11,5 @@ coverage
 *.info
 costs-reports.json
 node_modules
+deploy-testnet.mjs
 .vscode

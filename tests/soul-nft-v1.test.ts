@@ -9,15 +9,15 @@ const wallet2 = accounts.get("wallet_2")!;
 describe("Soul NFT Contract", () => {
   beforeEach(() => {
     // Enable base functionality gate, register strike-core as mint address and enable sale
-    simnet.callPublicFn("strike-core", "flip-gate", [], deployer);
-    simnet.callPublicFn("soul-nft", "set-mint-address", [], deployer);
-    simnet.callPublicFn("strike-core", "flip-sale", [], deployer);
+    simnet.callPublicFn("strike-core-v1", "flip-gate", [], deployer);
+    simnet.callPublicFn("soul-nft-v1", "set-mint-address", [], deployer);
+    simnet.callPublicFn("strike-core-v1", "flip-sale", [], deployer);
   });
 
   describe("Minting", () => {
     it("should mint NFT to new owner", () => {
       const { result } = simnet.callPublicFn(
-        "strike-core",
+        "strike-core-v1",
         "claim-one",
         [],
         wallet1
@@ -26,10 +26,10 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should increment last token ID after mint", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
       
       const { result } = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-last-token-id",
         [],
         wallet1
@@ -38,10 +38,10 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should update balance after mint", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
       
       const { result } = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-balance",
         [Cl.principal(wallet1)],
         wallet1
@@ -51,7 +51,7 @@ describe("Soul NFT Contract", () => {
 
     it("should fail if not called from mint address", () => {
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "mint",
         [Cl.principal(wallet1)],
         wallet1
@@ -61,14 +61,14 @@ describe("Soul NFT Contract", () => {
 
     it("should fail if mint limit reached", () => {
       // Set low mint limit
-      simnet.callPublicFn("soul-nft", "set-mint-limit", [Cl.uint(1)], deployer);
+      simnet.callPublicFn("soul-nft-v1", "set-mint-limit", [Cl.uint(1)], deployer);
       
       // Mint first NFT
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
       
       // Try to mint second NFT
       const { result } = simnet.callPublicFn(
-        "strike-core",
+        "strike-core-v1",
         "claim-one",
         [],
         wallet2
@@ -79,12 +79,12 @@ describe("Soul NFT Contract", () => {
 
   describe("Transfer", () => {
     beforeEach(() => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
     });
 
     it("should transfer NFT to recipient", () => {
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "transfer",
         [Cl.uint(1), Cl.principal(wallet1), Cl.principal(wallet2)],
         wallet1
@@ -94,20 +94,20 @@ describe("Soul NFT Contract", () => {
 
     it("should update balances after transfer", () => {
       simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "transfer",
         [Cl.uint(1), Cl.principal(wallet1), Cl.principal(wallet2)],
         wallet1
       );
       
       const balance1 = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-balance",
         [Cl.principal(wallet1)],
         wallet1
       );
       const balance2 = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-balance",
         [Cl.principal(wallet2)],
         wallet2
@@ -119,7 +119,7 @@ describe("Soul NFT Contract", () => {
 
     it("should fail if not sender", () => {
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "transfer",
         [Cl.uint(1), Cl.principal(wallet1), Cl.principal(wallet2)],
         wallet2
@@ -130,12 +130,12 @@ describe("Soul NFT Contract", () => {
 
   describe("Marketplace", () => {
     beforeEach(() => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
     });
 
     it("should list NFT for sale", () => {
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "list-in-ustx",
         [
           Cl.uint(1),
@@ -149,7 +149,7 @@ describe("Soul NFT Contract", () => {
 
     it("should unlist NFT", () => {
       simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "list-in-ustx",
         [
           Cl.uint(1),
@@ -160,7 +160,7 @@ describe("Soul NFT Contract", () => {
       );
 
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "unlist-in-ustx",
         [Cl.uint(1)],
         wallet1
@@ -170,7 +170,7 @@ describe("Soul NFT Contract", () => {
 
     it("should get listing info", () => {
       simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "list-in-ustx",
         [
           Cl.uint(1),
@@ -181,7 +181,7 @@ describe("Soul NFT Contract", () => {
       );
 
       const { result } = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-listing-in-ustx",
         [Cl.uint(1)],
         wallet1
@@ -198,7 +198,7 @@ describe("Soul NFT Contract", () => {
   describe("Metadata Management", () => {
     it("should set base URI", () => {
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "set-base-uri",
         [Cl.stringAscii("ipfs://newCID/")],
         deployer
@@ -208,7 +208,7 @@ describe("Soul NFT Contract", () => {
 
     it("should freeze metadata", () => {
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "freeze-metadata",
         [],
         deployer
@@ -217,10 +217,10 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should fail to set base URI after freeze", () => {
-      simnet.callPublicFn("soul-nft", "freeze-metadata", [], deployer);
+      simnet.callPublicFn("soul-nft-v1", "freeze-metadata", [], deployer);
       
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "set-base-uri",
         [Cl.stringAscii("ipfs://newCID/")],
         deployer
@@ -232,10 +232,10 @@ describe("Soul NFT Contract", () => {
   describe("Equipment Management", () => {
     it("should set equipment for NFT", () => {
       // Mint NFT first
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
 
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "set-equipment",
         [
           Cl.uint(1),
@@ -251,10 +251,10 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should fail to set equipment for non-owned NFT", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
 
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "set-equipment",
         [
           Cl.uint(1),
@@ -270,10 +270,10 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should equip item to specific slot", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
 
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "equip-slot",
         [Cl.uint(1), Cl.uint(1), Cl.some(Cl.uint(100))],
         wallet1
@@ -282,10 +282,10 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should fail to equip invalid slot", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
 
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "equip-slot",
         [Cl.uint(1), Cl.uint(10), Cl.some(Cl.uint(100))],
         wallet1
@@ -294,10 +294,10 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should update last-used timestamp", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
 
       const { result } = simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "update-last-used",
         [Cl.uint(1)],
         wallet1
@@ -306,9 +306,9 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should get equipment data", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
       simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "set-equipment",
         [
           Cl.uint(1),
@@ -322,7 +322,7 @@ describe("Soul NFT Contract", () => {
       );
 
       const { result } = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-equipment",
         [Cl.uint(1)],
         wallet1
@@ -331,16 +331,16 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should get specific slot data", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
       simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "equip-slot",
         [Cl.uint(1), Cl.uint(1), Cl.some(Cl.uint(100))],
         wallet1
       );
 
       const { result } = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-slot",
         [Cl.uint(1), Cl.uint(1)],
         wallet1
@@ -349,16 +349,16 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should get last-used timestamp", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
       simnet.callPublicFn(
-        "soul-nft",
+        "soul-nft-v1",
         "update-last-used",
         [Cl.uint(1)],
         wallet1
       );
 
       const { result } = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-last-used",
         [Cl.uint(1)],
         wallet1
@@ -367,10 +367,10 @@ describe("Soul NFT Contract", () => {
     });
 
     it("should return none for never used NFT", () => {
-      simnet.callPublicFn("strike-core", "claim-one", [], wallet1);
+      simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet1);
 
       const { result } = simnet.callReadOnlyFn(
-        "soul-nft",
+        "soul-nft-v1",
         "get-last-used",
         [Cl.uint(1)],
         wallet1

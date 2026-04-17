@@ -66,7 +66,7 @@
 
 ;; Check if account has Soul NFT
 (define-read-only (has-soul-nft (account principal))
-  (let ((balance (contract-call? .soul-nft get-balance account)))
+  (let ((balance (contract-call? .soul-nft-v1 get-balance account)))
     (if (> balance u0)
       (ok true)
       ERR-DONT-HAVE-SOUL-NFT)))
@@ -83,8 +83,8 @@
 (define-read-only (can-use-nft (nft-id uint) (owner principal))
   (let 
     (
-      (nft-owner-opt (unwrap! (contract-call? .soul-nft get-owner nft-id) (err false)))
-      (last-used-opt (unwrap! (contract-call? .soul-nft get-last-used nft-id) (err false)))
+      (nft-owner-opt (unwrap! (contract-call? .soul-nft-v1 get-owner nft-id) (err false)))
+      (last-used-opt (unwrap! (contract-call? .soul-nft-v1 get-last-used nft-id) (err false)))
     )
     (match nft-owner-opt
       nft-owner 
@@ -230,7 +230,7 @@
   (begin
     (asserts! (var-get raid-active) ERR-GATE-CLOSED)
     (asserts! (default-to false (map-get? raid-pass-users tx-sender)) ERR-NOT-IN-RAID)
-    (try! (contract-call? .raid-pass mint tx-sender))
+    (try! (contract-call? .raid-pass-v1 mint tx-sender))
   (ok true)))
 
 ;; Claim 1 NFT
@@ -259,7 +259,7 @@
     (asserts! (>= amount (var-get min-token-limit)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
     (asserts! (unwrap! (can-use-nft nft-id tx-sender) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
-    (try! (contract-call? .soul-nft update-last-used nft-id))
+    (try! (contract-call? .soul-nft-v1 update-last-used nft-id))
     (try! (stx-transfer? amount tx-sender current-contract))
     (let 
       (
@@ -293,7 +293,7 @@
     (asserts! (>= amount (var-get min-token-limit)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
     (asserts! (unwrap! (can-use-nft nft-id tx-sender) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
-    (try! (contract-call? .soul-nft update-last-used nft-id))
+    (try! (contract-call? .soul-nft-v1 update-last-used nft-id))
     (try! (stx-transfer? amount tx-sender current-contract))
     (let 
       (
@@ -313,7 +313,7 @@
         (random-hash (hash160 (concat 
           (concat (unwrap-panic (to-consensus-buff? stacks-block-time))
                   (unwrap-panic (to-consensus-buff? counter)))
-          (unwrap-panic (contract-hash? .strike-core)))))
+          (unwrap-panic (contract-hash? .strike-core-v1)))))
       )
       (map-set sessions session-id session-data)
       (var-set session-counter (+ counter u1))
@@ -332,7 +332,7 @@
     (asserts! (>= amount (var-get min-token-limit-sbtc)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
     (asserts! (unwrap! (can-use-nft nft-id tx-sender) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
-    (try! (contract-call? .soul-nft update-last-used nft-id))
+    (try! (contract-call? .soul-nft-v1 update-last-used nft-id))
     (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer amount tx-sender current-contract (some 0x)))
     (let 
       (
@@ -365,7 +365,7 @@
     (asserts! (>= amount (var-get min-token-limit-sbtc)) ERR-AMOUNT-TOO-LOW)
     (try! (has-soul-nft tx-sender))
     (asserts! (unwrap! (can-use-nft nft-id tx-sender) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
-    (try! (contract-call? .soul-nft update-last-used nft-id))
+    (try! (contract-call? .soul-nft-v1 update-last-used nft-id))
     (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer amount tx-sender current-contract (some 0x)))
     (let 
       (
@@ -385,7 +385,7 @@
         (random-hash (hash160 (concat 
           (concat (unwrap-panic (to-consensus-buff? stacks-block-time))
                   (unwrap-panic (to-consensus-buff? counter)))
-          (unwrap-panic (contract-hash? .strike-core)))))
+          (unwrap-panic (contract-hash? .strike-core-v1)))))
       )
       (map-set sessions session-id session-data)
       (var-set session-counter (+ counter u1))
@@ -413,7 +413,7 @@
     (try! (has-soul-nft tx-sender))
     (asserts! (unwrap! (can-use-nft nft-id tx-sender) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
     (try! (stx-transfer? bet tx-sender current-contract))
-    (try! (contract-call? .soul-nft update-last-used nft-id))
+    (try! (contract-call? .soul-nft-v1 update-last-used nft-id))
     (map-set sessions session-id updated-session)
     (ok true)
   )
@@ -435,7 +435,7 @@
     (try! (has-soul-nft tx-sender))
     (asserts! (unwrap! (can-use-nft nft-id tx-sender) ERR-NFT-ON-COOLDOWN) ERR-NFT-ON-COOLDOWN)
     (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer bet tx-sender current-contract (some 0x)))
-    (try! (contract-call? .soul-nft update-last-used nft-id))
+    (try! (contract-call? .soul-nft-v1 update-last-used nft-id))
     (map-set sessions session-id updated-session)
     (ok true)
   )
@@ -567,7 +567,7 @@
 (define-private (claim)
   (begin
     (asserts! (var-get sale-active) ERR-SALE-NOT-ACTIVE)
-    (try! (contract-call? .soul-nft mint tx-sender))
+    (try! (contract-call? .soul-nft-v1 mint tx-sender))
   (ok true)))
 
 ;; Internal - Send SIP-010 tokens to winner player
@@ -684,9 +684,9 @@
 
 ;; Register this contract as allowed to mint
 (unwrap-panic (as-contract? ((with-all-assets-unsafe))
-  (unwrap-panic (contract-call? .soul-nft set-mint-address))
+  (unwrap-panic (contract-call? .soul-nft-v1 set-mint-address))
 ))
 
 (unwrap-panic (as-contract? ((with-all-assets-unsafe))
-  (unwrap-panic (contract-call? .raid-pass set-mint-address))
+  (unwrap-panic (contract-call? .raid-pass-v1 set-mint-address))
 ))

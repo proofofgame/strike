@@ -66,7 +66,7 @@ This project leverages the latest Clarity 4 enhancements:
 
 ## Contracts
 
-### strike-core.clar
+### strike-core-v1.clar
 
 Core contract for managing game sessions and NFT-gated access.
 
@@ -223,7 +223,7 @@ Core contract for managing game sessions and NFT-gated access.
 - Mints 1 Raid Pass NFT to caller
 - Requires raid to be active (`ERR-GATE-CLOSED u111`)
 - Requires caller to have entered via `enter` (`ERR-NOT-IN-RAID u112`)
-- Calls `.raid-pass mint` — limited to 1 per principal (`ERR-ALREADY-MINTED u307`)
+- Calls `.raid-pass-v1 mint` — limited to 1 per principal (`ERR-ALREADY-MINTED u307`)
 
 **General Functions:**
 
@@ -377,7 +377,7 @@ Core contract for managing game sessions and NFT-gated access.
 
 ---
 
-### raid-pass.clar
+### raid-pass-v1.clar
 
 Raid Pass NFT contract implementing SIP-009 standard. Limited to 1 per principal, 500 total supply.
 
@@ -385,7 +385,7 @@ Raid Pass NFT contract implementing SIP-009 standard. Limited to 1 per principal
 
 **mint** `(new-owner principal)`
 - Mints new Raid Pass NFT to specified owner
-- Can only be called from authorized mint contract (strike-core)
+- Can only be called from authorized mint contract (strike-core-v1)
 - Enforces mint limit (500)
 - Enforces 1-per-principal limit (`ERR-ALREADY-MINTED u307`)
 - Increments token counter
@@ -409,7 +409,7 @@ Raid Pass NFT contract implementing SIP-009 standard. Limited to 1 per principal
 **set-mint-address**
 - Registers authorized minting contract
 - Can only be set once
-- Set at deploy time by strike-core
+- Set at deploy time by strike-core-v1
 
 **list-in-ustx** `(id uint) (price uint) (comm <commission-trait>)`
 - Lists NFT for sale on marketplace
@@ -447,7 +447,7 @@ Raid Pass NFT contract implementing SIP-009 standard. Limited to 1 per principal
 
 ---
 
-### soul-nft.clar
+### soul-nft-v1.clar
 
 NFT contract with marketplace functionality implementing SIP-009 standard.
 
@@ -547,7 +547,7 @@ NFT contract with marketplace functionality implementing SIP-009 standard.
 **get-last-used** `(nft-id uint)`
 - Returns last-used timestamp for an NFT
 - Returns none if NFT has never been used
-- Used by strike-core for cooldown checks
+- Used by strike-core-v1 for cooldown checks
 
 #### Error Codes
 
@@ -587,7 +587,7 @@ npm run test:report
 
 ### Test Coverage
 
-**strike-core.test.ts** (77 tests: 75 passed, 2 skipped):
+**strike-core-v1.test.ts** (77 tests: 75 passed, 2 skipped):
 - **Gate management** (flip-gate toggle, owner-only, gate-closed blocking)
 - **Raid management** (raid-enabled check, flip-raid toggle, owner-only, block enter when closed, block claim-raid-pass when closed)
 - **Enter & Raid Pass** (enter, multi-user enter, claim-raid-pass, fail without enter, 1-per-principal limit)
@@ -617,7 +617,7 @@ npm run test:report
 
 *Note: Skipped tests require testnet/mainnet deployment for full sBTC integration testing due to simnet limitations with external contract administrative functions.*
 
-**raid-pass.test.ts** (33 tests):
+**raid-pass-v1.test.ts** (33 tests):
 - NFT minting via enter → claim-raid-pass flow
 - 1-per-principal mint limit enforcement
 - Mint limit (sold out) enforcement
@@ -628,7 +628,7 @@ npm run test:report
 - Mint limit configuration and authorization
 - Read-only function verification
 
-**soul-nft.test.ts** (23 tests):
+**soul-nft-v1.test.ts** (23 tests):
 - NFT minting and transfers
 - Marketplace listing/unlisting
 - NFT purchases with commission
