@@ -98,18 +98,18 @@ plan:
     - id: 3
       transactions:
         - emulated-contract-publish:
-            contract-name: raid-pass
+            contract-name: raid-pass-v1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/raid-pass.clar
+            path: contracts/raid-pass-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
-            contract-name: soul-nft
+            contract-name: soul-nft-v1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/soul-nft.clar
+            path: contracts/soul-nft-v1.clar
             clarity-version: 4
         - emulated-contract-publish:
-            contract-name: strike-core
+            contract-name: strike-core-v1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/strike-core.clar
+            path: contracts/strike-core-v1.clar
             clarity-version: 4
       epoch: "3.3"
