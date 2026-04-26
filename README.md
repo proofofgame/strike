@@ -8,22 +8,22 @@ A blockchain-based gaming platform built on Stacks, featuring NFT-gated access a
 ## Key Features
 
 ### Gate System
-- **Base functionality gate** (`gate-active`) controls access to all contract functions
-- `flip-gate` toggle — owner-only, the only function that works without the gate
-- All public functions require gate to be open (`ERR-GATE-CLOSED u111`)
+- **Base functionality gate** (`gate-active`) controls access to most state-changing gameplay/admin functions
+- `flip-gate` toggle — owner-only, works even when gate is closed
+- Most state-changing gameplay/admin functions require gate to be open (`ERR-GATE-CLOSED u111`)
 - Allows safe contract deployment and maintenance windows
 
 ### Raid System
 - **Raid gate** (`raid-active`) controls access to raid participation functions
 - `flip-raid` toggle — owner-only, independent from the base gate
-- `enter` and `claim-raid-pass` require raid to be active (`ERR-GATE-CLOSED u111`)
+- `enter` and `claim-raid-pass` require raid to be active (`ERR-RAID-NOT-ACTIVE u113`)
 - Allows separate control of raid events without affecting core gameplay
 
 ### Raid Pass System
 - **Enter**: Any user can call `enter` to register as a raid participant (requires raid active)
 - **Raid Pass NFT**: Registered users can claim a Raid Pass NFT (1 per principal)
 - `raid-pass-users` map tracks who entered the strike
-- `claim-raid-pass` checks registration and mints via `.raid-pass` contract
+- `claim-raid-pass` checks registration and mints via `.raid-pass-v1` contract
 - Raid Pass has separate mint limit (500) and error code range (u300+)
 
 ### Multi-Currency Support
@@ -80,7 +80,7 @@ Core contract for managing game sessions and NFT-gated access.
 - Requires NFT to be off cooldown (24 hours since last use)
 - Requires bet amount to meet minimum token limit
 - Updates NFT last-used timestamp
-- Generates unique session ID using contract hash and counter
+- Generates unique session ID from caller, timestamp, and session counter
 - Transfers STX bet from creator to contract using `current-contract` keyword
 - Records session with `stacks-block-time` timestamp and currency-type "STX"
 - Returns session ID
@@ -90,7 +90,7 @@ Core contract for managing game sessions and NFT-gated access.
 - Creates and auto-finalizes PvE session with STX
 - Contract acts as opponent and auto-finalizes
 - Uses `contract-hash?` for enhanced randomization
-- Internally calls approve-session and finalize-session
+- Internally calls `approve-session-internal` and `finalize-session-internal`
 - Rewards 90% to creator, 10% to fees
 - Returns session ID
 
@@ -136,7 +136,7 @@ Core contract for managing game sessions and NFT-gated access.
 **create-session-by-default-with-sbtc** `(nft-id uint) (mode (string-ascii 20)) (amount uint)`
 - Creates and auto-finalizes PvE session with sBTC
 - Contract acts as opponent
-- Internally calls approve-session-internal-sbtc and finalize-session-sbtc
+- Internally calls `approve-session-internal-sbtc` and `finalize-session-sbtc-internal`
 - Rewards 90% sBTC to creator, 10% to fees
 - Returns session ID
 
@@ -166,7 +166,7 @@ Core contract for managing game sessions and NFT-gated access.
 **deposit-stx** `(amount uint)`
 - Deposits STX to contract for reward pool
 - Transfers specified amount from sender to contract using `current-contract`
-- Available to any user
+- Owner-only and requires gate to be active
 
 **withdraw-stx** `(amount uint)`
 - Withdraws STX from contract (only contract owner)
@@ -203,8 +203,8 @@ Core contract for managing game sessions and NFT-gated access.
 
 **flip-gate**
 - Toggles base functionality gate on/off (only contract owner)
-- The only function that works without the gate being open
-- All other core public functions require gate to be active
+- Works even when gate is closed
+- `flip-raid` is also callable without base gate checks
 - Returns new gate state
 
 **flip-raid**
@@ -215,13 +215,13 @@ Core contract for managing game sessions and NFT-gated access.
 
 **enter**
 - Registers caller as a raid participant in `raid-pass-users` map
-- Requires raid to be active (`ERR-GATE-CLOSED u111`)
+- Requires raid to be active (`ERR-RAID-NOT-ACTIVE u113`)
 - Prints "Entry confirmed"
 - Available to any user
 
 **claim-raid-pass**
 - Mints 1 Raid Pass NFT to caller
-- Requires raid to be active (`ERR-GATE-CLOSED u111`)
+- Requires raid to be active (`ERR-RAID-NOT-ACTIVE u113`)
 - Requires caller to have entered via `enter` (`ERR-NOT-IN-RAID u112`)
 - Calls `.raid-pass-v1 mint` — limited to 1 per principal (`ERR-ALREADY-MINTED u307`)
 
@@ -252,10 +252,7 @@ Core contract for managing game sessions and NFT-gated access.
 - Default: u1000000000 (10 sBTC)
 - Example: `(set-min-token-limit-sbtc u1000000000)` for 10 sBTC minimum
 
-**set-mint-address**
-- Registers soul-nft contract as authorized minter
-- Uses `as-contract?` with all-assets allowance
-- Can only be called once by contract owner
+> Note: mint-address registration for `.soul-nft-v1` and `.raid-pass-v1` is executed at deploy time in top-level expressions inside `strike-core-v1`, not via a public callable function.
 
 #### Read-Only Functions
 
@@ -311,7 +308,8 @@ Core contract for managing game sessions and NFT-gated access.
 - Checks if NFT is owned by specified principal and off cooldown
 - Validates NFT ownership via soul-nft contract
 - Returns (ok true) if owned and 24 hours have passed since last use
-- Returns (ok false) if on cooldown or not owned
+- Returns (ok false) when on cooldown
+- Returns (err false) when NFT is not owned / not found
 - Returns (ok true) if NFT has never been used
 
 #### Error Codes
@@ -329,7 +327,7 @@ Core contract for managing game sessions and NFT-gated access.
 - **ERR-CANNOT-CANCEL** (u110): Cannot cancel session (opponent already joined)
 - **ERR-GATE-CLOSED** (u111): Base functionality gate is not active
 - **ERR-NOT-IN-RAID** (u112): Caller has not entered the raid via `enter`
-- **ERR-RAID-NOT-ACTIVE** (u113): Raid participation gate is not active
+- **ERR-RAID-NOT-ACTIVE** (u113): Raid participation gate is not active (`enter`, `claim-raid-pass`)
 
 #### Private (Internal) Functions
 
@@ -578,7 +576,7 @@ clarinet --version
 # Check contracts (Clarity 4 syntax)
 clarinet check
 
-# Run test suite (133 tests: 131 passed, 2 skipped)
+# Run test suite (187 tests: 185 passed, 2 skipped)
 npm test
 
 # Run with coverage report
@@ -587,7 +585,7 @@ npm run test:report
 
 ### Test Coverage
 
-**strike-core-v1.test.ts** (77 tests: 75 passed, 2 skipped):
+**strike-core-v1.test.ts** (79 tests: 77 passed, 2 skipped):
 - **Gate management** (flip-gate toggle, owner-only, gate-closed blocking)
 - **Raid management** (raid-enabled check, flip-raid toggle, owner-only, block enter when closed, block claim-raid-pass when closed)
 - **Enter & Raid Pass** (enter, multi-user enter, claim-raid-pass, fail without enter, 1-per-principal limit)
@@ -825,7 +823,7 @@ Caller → rng-operator-v1 → rng-core-v1 → VRF seed → sha512/256 hash chai
 
 ## Tests
 
-47 tests across 2 test files. Run with `npm test`.
+52 tests across 3 test files. Run with `npm test`.
 
 ### rng-core-v1.test.ts (25 tests)
 
@@ -837,7 +835,7 @@ Caller → rng-operator-v1 → rng-core-v1 → VRF seed → sha512/256 hash chai
 - **finalize-randomness guards**: reject non-existent request
 - **ownership transfer**: owner handover, old owner lockout, new owner admin access
 
-### rng-operator-v1.test.ts (22 tests)
+### rng-operator-v1.test.ts (25 tests)
 
 - **initial state**: deployer owner, `last-request-id=0`, `last-random=0`, default core points to `.rng-core-v1`
 - **read-only guards**: unknown result checks and `max=0` range guard
@@ -845,6 +843,11 @@ Caller → rng-operator-v1 → rng-core-v1 → VRF seed → sha512/256 hash chai
 - **receive-randomness**: rejects unknown request IDs
 - **request flow**: validates wrong core handling, invalid mode handling, and core error propagation
 - **ownership transfer**: non-owner blocked, owner transfer succeeds, permissions switch correctly
+
+### repo-integration.test.ts (2 tests)
+
+- **module wiring smoke**: checks RNG and Strike read-only entry points are callable in one simnet run
+- **default config smoke**: verifies core defaults (`get-min-token-limit`, `get-rng-core`) are returned as expected
 
 ## License
 

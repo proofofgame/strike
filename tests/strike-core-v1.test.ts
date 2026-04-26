@@ -272,6 +272,20 @@ describe("Strike Core Contract", () => {
       const claim = simnet.callPublicFn("strike-core-v1", "claim-one", [], wallet2);
       expect(claim.result).toBeErr(Cl.uint(111));
     });
+
+    it("should allow flip-raid when base gate is closed", () => {
+      // Gate starts open in beforeEach; close it first.
+      simnet.callPublicFn("strike-core-v1", "flip-gate", [], deployer);
+
+      const { result } = simnet.callPublicFn(
+        "strike-core-v1",
+        "flip-raid",
+        [],
+        deployer
+      );
+
+      expect(result).toBeOk(Cl.bool(true));
+    });
   });
 
   describe("Claim Functions", () => {
@@ -556,6 +570,18 @@ describe("Strike Core Contract", () => {
       const { result } = simnet.callPublicFn(
         "strike-core-v1",
         "deposit-sbtc",
+        [Cl.uint(1000000)],
+        wallet1
+      );
+      expect(result).toBeErr(Cl.uint(100)); // ERR-NOT-AUTHORIZED
+    });
+  });
+
+  describe("STX Deposit", () => {
+    it("should fail to deposit STX if not owner", () => {
+      const { result } = simnet.callPublicFn(
+        "strike-core-v1",
+        "deposit-stx",
         [Cl.uint(1000000)],
         wallet1
       );
@@ -1423,7 +1449,7 @@ describe("Strike Core Contract", () => {
         [],
         wallet1
       );
-      expect(result).toBeErr(Cl.uint(111)); // ERR-GATE-CLOSED (raid not active)
+      expect(result).toBeErr(Cl.uint(113)); // ERR-RAID-NOT-ACTIVE
     });
 
     it("should block claim-raid-pass when raid is closed", () => {
@@ -1433,7 +1459,7 @@ describe("Strike Core Contract", () => {
         [],
         wallet1
       );
-      expect(result).toBeErr(Cl.uint(111)); // ERR-GATE-CLOSED (raid not active)
+      expect(result).toBeErr(Cl.uint(113)); // ERR-RAID-NOT-ACTIVE
     });
   });
 

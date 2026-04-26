@@ -220,7 +220,7 @@
 ;; Enter the strike
 (define-public (enter)
   (begin
-    (asserts! (var-get raid-active) ERR-GATE-CLOSED)
+    (asserts! (var-get raid-active) ERR-RAID-NOT-ACTIVE)
     (map-set raid-pass-users tx-sender true)
     (print "Entry confirmed")
     (ok true)))
@@ -228,7 +228,7 @@
 ;; Claim Pass NFT
 (define-public (claim-raid-pass)
   (begin
-    (asserts! (var-get raid-active) ERR-GATE-CLOSED)
+    (asserts! (var-get raid-active) ERR-RAID-NOT-ACTIVE)
     (asserts! (default-to false (map-get? raid-pass-users tx-sender)) ERR-NOT-IN-RAID)
     (try! (contract-call? .raid-pass-v1 mint tx-sender))
   (ok true)))
