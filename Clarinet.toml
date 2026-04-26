@@ -1,10 +1,18 @@
 [project]
-name = "randomness"
+name = "strike"
 description = ""
 authors = []
 telemetry = false
 cache_dir = "./.cache"
-requirements = []
+
+[[project.requirements]]
+contract_id = "SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait"
+
+[[project.requirements]]
+contract_id = "SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5.commission-trait"
+
+[[project.requirements]]
+contract_id = "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token"
 
 [contracts.rng-traits-v1]
 path = "contracts/rng-traits-v1.clar"
@@ -18,6 +26,21 @@ epoch = '3.3'
 
 [contracts.rng-operator-v1]
 path = "contracts/rng-operator-v1.clar"
+clarity_version = 4
+epoch = '3.3'
+
+[contracts.soul-nft-v1]
+path = "contracts/soul-nft-v1.clar"
+clarity_version = 4
+epoch = '3.3'
+
+[contracts.raid-pass-v1]
+path = "contracts/raid-pass-v1.clar"
+clarity_version = 4
+epoch = '3.3'
+
+[contracts.strike-core-v1]
+path = "contracts/strike-core-v1.clar"
 clarity_version = 4
 epoch = '3.3'
 
