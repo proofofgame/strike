@@ -26,7 +26,10 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov", "json"],
       reportsDirectory: "./coverage",
-      include: ["contracts/**"],
+      // Clarity contracts are not instrumented by V8; collect coverage from TypeScript test/runtime files.
+      include: ["tests/**/*.ts"],
+      // Override Vitest defaults that exclude test files, otherwise lcov stays empty.
+      exclude: ["node_modules/**", "coverage/**"],
     },
   },
 });
