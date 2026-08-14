@@ -117,6 +117,11 @@ plan:
       path: contracts/rng-operator-v1.clar
       clarity-version: 4
     - transaction-type: emulated-contract-publish
+      contract-name: skate-gear-v1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/skate-gear-v1.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
       contract-name: soul-nft-v1
       emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       path: contracts/soul-nft-v1.clar
@@ -125,5 +130,10 @@ plan:
       contract-name: strike-core-v1
       emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       path: contracts/strike-core-v1.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
+      contract-name: strike-duel-core-v1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/strike-duel-core-v1.clar
       clarity-version: 4
     epoch: '3.3'

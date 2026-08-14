@@ -8,9 +8,11 @@
     "test:watch": "vitest",
     "test:coverage": "c8 --reporter=lcov --reporter=text vitest run",
     "test:report": "vitest run --coverage",
-    "test:ci": "vitest run --coverage -- --coverage --costs"
+    "test:ci": "vitest run --coverage -- --coverage --costs",
+    "metadata:generate": "node scripts/generate-metadata.mjs"
   },
   "devDependencies": {
+    "@noble/curves": "^2.0.1",
     "@stacks/clarinet-sdk": "^3.16.0",
     "@stacks/transactions": "^7.4.0",
     "@vitest/coverage-istanbul": "^1.6.1",
