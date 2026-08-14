@@ -45,6 +45,13 @@ A blockchain-based gaming platform built on Stacks, featuring NFT-gated access a
 - Cooldown tracked via `stacks-block-time` (86400 seconds)
 - First use of NFT has no cooldown
 
+### Strike Duel + S-KATE Gear
+- Player 1 signs `create-duel` with a server-issued 32-byte commitment (`tx-sender` is the creator)
+- Player 2 has **no** required blockchain transaction; combat stays off-chain
+- Player 1 later signs `claim-skate` with a backend completion voucher
+- `skate-gear-v1` mints damaged (`durability 0/1`); `repair-skate` pays STX and moves durability to `1/1`
+- Independent of `strike-core-v1` Soul-gated sessions; see [docs/duel-skate-v1.md](docs/duel-skate-v1.md)
+
 ### Session Management
 - **PvE (Player vs Environment)**: Auto-finalized sessions with contract as opponent
 - **PvP (Player vs Player)**: Two-player competitive sessions
@@ -558,6 +565,59 @@ NFT contract with marketplace functionality implementing SIP-009 standard.
 - **ERR-LISTING** (u206): NFT listing error
 - **ERR-INVALID-SLOT** (u207): Slot number must be 1-5
 
+---
+
+### strike-duel-core-v1.clar
+
+Creator-only Duel entry and Skate claim. Player 2 and combat are not on-chain.
+
+#### Public Functions
+
+**create-duel** `(duel-id (buff 32))`
+- Records `tx-sender` as creator for a 32-byte server-issued commitment
+- Rejects empty, short, and all-zero commitments
+- Does not store the public 6-character invite ID or invite secret
+- Requires `create-active`
+
+**claim-skate** `(duel-id (buff 32)) (expires-at uint) (signature (buff 64))`
+- Creator-only; verifies a secp256k1 completion voucher against `get-claim-hash`
+- Mints one damaged Skate via `.skate-gear-v1`
+- One claim per Duel and one Skate per principal per season
+
+**cancel-duel** `(duel-id (buff 32))`
+- Creator-only cancel before claim
+
+Owner functions include `set-create-active`, `set-claim-active`, `set-reward-signer`, `set-current-season`, `set-current-ruleset`, and two-step `propose-ownership` / `accept-ownership`.
+
+#### Read-Only Functions
+
+**get-claim-hash** `(duel-id (buff 32)) (creator principal) (season uint) (expires-at uint)`
+- Canonical 32-byte voucher digest. Sign this digest directly (`prehash: false`).
+
+Also: `get-duel`, `get-current-season`, `get-current-ruleset`, `is-duel-claimed`, `is-season-claimed`, `get-reward-signer`.
+
+Full interface, voucher rules, and deployment order: [docs/duel-skate-v1.md](docs/duel-skate-v1.md).
+
+### skate-gear-v1.clar
+
+SIP-009 S-KATE Gear NFT. Minted only by the authorized Duel controller.
+
+#### Public Functions
+
+**mint** `(new-owner principal)` — authorized minter only; every Skate starts at durability `0`
+
+**repair-skate** `(token-id uint)` — owner pays `get-repair-price()` (default 10,000 µSTX) to `get-repair-treasury()` and sets durability `1`
+
+**transfer** `(token-id uint) (sender principal) (recipient principal)` — SIP-009 transfer; does not restore claim eligibility
+
+Owner functions include `set-minter`, `freeze-minter`, `set-max-supply`, `freeze-supply`, `set-metadata-base-uri`, `freeze-metadata`, `set-repair-price`, `set-repair-treasury`, and two-step ownership rotation.
+
+#### Read-Only Functions
+
+**get-durability** `(token-id uint)` — authoritative damaged (`0`) / repaired (`1`) value
+
+Also: `get-token-uri`, `get-owner`, `get-last-token-id`, `get-max-supply`, `get-repair-price`, `get-repair-treasury`.
+
 ## Development
 
 ### Setup
@@ -576,8 +636,11 @@ clarinet --version
 # Check contracts (Clarity 4 syntax)
 clarinet check
 
-# Run test suite (187 tests: 185 passed, 2 skipped)
+# Run test suite
 npm test
+
+# Generate numbered SIP-016 Skate metadata after setting the image CID
+npm run metadata:generate
 
 # Run with coverage report
 npm run test:report
@@ -625,6 +688,19 @@ npm run test:report
 - Mint address registration (set at deploy)
 - Mint limit configuration and authorization
 - Read-only function verification
+
+**strike-duel-v1.test.ts** (12 tests):
+- Creator Duel entry and duplicate / zero / short commitment rejection
+- Damaged Skate mint via completion voucher
+- Player 2 claim rejection
+- Forged, expired, replayed, and same-season claim rejection
+- Transfer without renewed claim eligibility
+- Owner-only paid repair and durability `0 → 1`
+- Minter hijack / direct mint rejection
+- Adjustable then frozen supply
+- Numbered SIP-009 metadata URI
+- Malformed reward signer rejection
+- Two-step ownership transfer on both Duel contracts
 
 **soul-nft-v1.test.ts** (23 tests):
 - NFT minting and transfers
@@ -823,7 +899,7 @@ Caller → rng-operator-v1 → rng-core-v1 → VRF seed → sha512/256 hash chai
 
 ## Tests
 
-52 tests across 3 test files. Run with `npm test`.
+53 tests across 3 test files. Run with `npm test`.
 
 ### rng-core-v1.test.ts (25 tests)
 
@@ -844,10 +920,11 @@ Caller → rng-operator-v1 → rng-core-v1 → VRF seed → sha512/256 hash chai
 - **request flow**: validates wrong core handling, invalid mode handling, and core error propagation
 - **ownership transfer**: non-owner blocked, owner transfer succeeds, permissions switch correctly
 
-### repo-integration.test.ts (2 tests)
+### repo-integration.test.ts (3 tests)
 
 - **module wiring smoke**: checks RNG and Strike read-only entry points are callable in one simnet run
 - **default config smoke**: verifies core defaults (`get-min-token-limit`, `get-rng-core`) are returned as expected
+- **Duel / Skate wiring smoke**: checks `get-current-season` and `get-max-supply` in the same simnet run
 
 ## License
 

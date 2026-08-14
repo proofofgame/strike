@@ -1,0 +1,20 @@
+{
+  "sip": 16,
+  "name": "S-KATE Skate #{id}",
+  "description": "Damaged Gear earned by creating and completing a valid Skullcoin Strike Duel. Repair state and durability are stored on-chain.",
+  "image": "ipfs://REPLACE_WITH_IMAGE_CID/skate.webp",
+  "attributes": [
+    {
+      "trait_type": "Character",
+      "value": "S-KATE"
+    },
+    {
+      "trait_type": "Gear Type",
+      "value": "Skate"
+    },
+    {
+      "trait_type": "Edition",
+      "value": "Strike Duel Season 1"
+    }
+  ]
+}

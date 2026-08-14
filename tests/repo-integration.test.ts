@@ -20,4 +20,22 @@ describe("Repository Integration Smoke", () => {
     expect(minStx.result).toBeUint(1000000);
     expect(rngCoreRef.result.type).toBe("ok");
   });
+
+  it("exposes Duel and Skate read-only entry points", () => {
+    const season = simnet.callReadOnlyFn(
+      "strike-duel-core-v1",
+      "get-current-season",
+      [],
+      deployer,
+    );
+    const supply = simnet.callReadOnlyFn(
+      "skate-gear-v1",
+      "get-max-supply",
+      [],
+      deployer,
+    );
+
+    expect(season.result).toBeUint(1);
+    expect(supply.result).toBeUint(500);
+  });
 });
