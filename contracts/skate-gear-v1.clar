@@ -1,4 +1,4 @@
-;; Skullcoin | Strike | S-KATE Gear NFT | v1.0.0-rc1
+;; Skullcoin | Strike | S-KATE Gear NFT | v1.0.0
 ;; SIP-009 NFT with on-chain damaged/repaired durability.
 
 (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
@@ -6,19 +6,19 @@
 (define-non-fungible-token skate uint)
 
 ;; Errors
-(define-constant ERR-NOT-AUTHORIZED (err u300))
-(define-constant ERR-SOLD-OUT (err u301))
-(define-constant ERR-TOKEN-NOT-FOUND (err u302))
-(define-constant ERR-MINTER-NOT-SET (err u303))
-(define-constant ERR-MINTER-FROZEN (err u304))
-(define-constant ERR-SUPPLY-FROZEN (err u305))
-(define-constant ERR-METADATA-FROZEN (err u306))
-(define-constant ERR-INVALID-SUPPLY (err u307))
-(define-constant ERR-ALREADY-REPAIRED (err u308))
-(define-constant ERR-INVALID-PRICE (err u309))
-(define-constant ERR-INVALID-RECIPIENT (err u310))
-(define-constant ERR-NO-PENDING-OWNER (err u311))
-(define-constant ERR-INVALID-OWNER (err u312))
+(define-constant ERR-NOT-AUTHORIZED (err u600))
+(define-constant ERR-SOLD-OUT (err u601))
+(define-constant ERR-TOKEN-NOT-FOUND (err u602))
+(define-constant ERR-MINTER-NOT-SET (err u603))
+(define-constant ERR-MINTER-FROZEN (err u604))
+(define-constant ERR-SUPPLY-FROZEN (err u605))
+(define-constant ERR-METADATA-FROZEN (err u606))
+(define-constant ERR-INVALID-SUPPLY (err u607))
+(define-constant ERR-ALREADY-REPAIRED (err u608))
+(define-constant ERR-INVALID-PRICE (err u609))
+(define-constant ERR-INVALID-RECIPIENT (err u610))
+(define-constant ERR-NO-PENDING-OWNER (err u611))
+(define-constant ERR-INVALID-OWNER (err u612))
 
 ;; Two-step ownership transfer prevents permanent loss from an address typo.
 ;; Mainnet deployment should still use the Skullcoin admin/multisig.

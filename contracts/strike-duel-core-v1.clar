@@ -1,25 +1,25 @@
-;; Skullcoin | Strike | Duel Creator + Skate Claim | v1.0.0-rc1
+;; Skullcoin | Strike | Duel Creator + Skate Claim | v1.0.0
 ;; Player 1 creates the Duel and later claims the Skate.
 ;; Player 2 and all combat rounds remain off-chain/server-authoritative.
 
 ;; Errors
-(define-constant ERR-NOT-AUTHORIZED (err u100))
-(define-constant ERR-CREATE-CLOSED (err u101))
-(define-constant ERR-CLAIM-CLOSED (err u102))
-(define-constant ERR-DUEL-EXISTS (err u103))
-(define-constant ERR-DUEL-NOT-FOUND (err u104))
-(define-constant ERR-DUEL-CANCELLED (err u105))
-(define-constant ERR-DUEL-ALREADY-CLAIMED (err u106))
-(define-constant ERR-SEASON-ALREADY-CLAIMED (err u107))
-(define-constant ERR-VOUCHER-EXPIRED (err u108))
-(define-constant ERR-INVALID-VOUCHER (err u109))
-(define-constant ERR-INVALID-DUEL-ID (err u110))
-(define-constant ERR-INVALID-RULESET (err u111))
-(define-constant ERR-INVALID-SEASON (err u112))
-(define-constant ERR-DUEL-ALREADY-CANCELLED (err u113))
-(define-constant ERR-INVALID-SIGNER (err u114))
-(define-constant ERR-NO-PENDING-OWNER (err u115))
-(define-constant ERR-INVALID-OWNER (err u116))
+(define-constant ERR-NOT-AUTHORIZED (err u700))
+(define-constant ERR-CREATE-CLOSED (err u701))
+(define-constant ERR-CLAIM-CLOSED (err u702))
+(define-constant ERR-DUEL-EXISTS (err u703))
+(define-constant ERR-DUEL-NOT-FOUND (err u704))
+(define-constant ERR-DUEL-CANCELLED (err u705))
+(define-constant ERR-DUEL-ALREADY-CLAIMED (err u706))
+(define-constant ERR-SEASON-ALREADY-CLAIMED (err u707))
+(define-constant ERR-VOUCHER-EXPIRED (err u708))
+(define-constant ERR-INVALID-VOUCHER (err u709))
+(define-constant ERR-INVALID-DUEL-ID (err u710))
+(define-constant ERR-INVALID-RULESET (err u711))
+(define-constant ERR-INVALID-SEASON (err u712))
+(define-constant ERR-DUEL-ALREADY-CANCELLED (err u713))
+(define-constant ERR-INVALID-SIGNER (err u714))
+(define-constant ERR-NO-PENDING-OWNER (err u715))
+(define-constant ERR-INVALID-OWNER (err u716))
 
 (define-constant ZERO-BUFF-32 0x0000000000000000000000000000000000000000000000000000000000000000)
 (define-constant ZERO-BUFF-33 0x000000000000000000000000000000000000000000000000000000000000000000)
