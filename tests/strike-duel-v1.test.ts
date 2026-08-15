@@ -135,16 +135,16 @@ describe("Player 1 Duel entry", () => {
   it("rejects duplicate, zero, empty, and short Duel commitments", () => {
     const id = duelId(2);
     expect(createDuel(id).result).toBeOk(id);
-    expect(createDuel(id).result).toBeErr(Cl.uint(103));
+    expect(createDuel(id).result).toBeErr(Cl.uint(703));
 
     const zero = Cl.buffer(new Uint8Array(32));
-    expect(createDuel(zero).result).toBeErr(Cl.uint(110));
+    expect(createDuel(zero).result).toBeErr(Cl.uint(710));
 
     const empty = Cl.buffer(new Uint8Array());
-    expect(createDuel(empty).result).toBeErr(Cl.uint(110));
+    expect(createDuel(empty).result).toBeErr(Cl.uint(710));
 
     const short = Cl.buffer(new Uint8Array(31).fill(1));
-    expect(createDuel(short).result).toBeErr(Cl.uint(110));
+    expect(createDuel(short).result).toBeErr(Cl.uint(710));
   });
 });
 
@@ -184,7 +184,7 @@ describe("Skate claim authorization", () => {
       [id, Cl.uint(expiresAt), signature],
       player2,
     );
-    expect(claim.result).toBeErr(Cl.uint(100));
+    expect(claim.result).toBeErr(Cl.uint(700));
   });
 
   it("rejects forged, expired, replayed, and second same-season claims", () => {
@@ -200,7 +200,7 @@ describe("Skate claim authorization", () => {
         [id, Cl.uint(expiresAt), forged],
         player1,
       ).result,
-    ).toBeErr(Cl.uint(109));
+    ).toBeErr(Cl.uint(709));
 
     const signature = voucherSignature(id, player1, 1, expiresAt);
     expect(
@@ -219,7 +219,7 @@ describe("Skate claim authorization", () => {
         [id, Cl.uint(expiresAt), signature],
         player1,
       ).result,
-    ).toBeErr(Cl.uint(106));
+    ).toBeErr(Cl.uint(706));
 
     const second = duelId(6);
     expect(createDuel(second).result).toBeOk(second);
@@ -231,7 +231,7 @@ describe("Skate claim authorization", () => {
         [second, Cl.uint(expiresAt), secondSignature],
         player1,
       ).result,
-    ).toBeErr(Cl.uint(107));
+    ).toBeErr(Cl.uint(707));
 
     const expired = duelId(7);
     expect(createDuel(expired, 2).result).toBeOk(expired);
@@ -244,7 +244,7 @@ describe("Skate claim authorization", () => {
         [expired, Cl.uint(oldHeight), expiredSignature],
         player1,
       ).result,
-    ).toBeErr(Cl.uint(108));
+    ).toBeErr(Cl.uint(708));
   });
 
   it("does not restore claim eligibility after the Skate is transferred", () => {
@@ -281,7 +281,7 @@ describe("Skate claim authorization", () => {
         [second, Cl.uint(expiresAt), secondSignature],
         player1,
       ).result,
-    ).toBeErr(Cl.uint(107));
+    ).toBeErr(Cl.uint(707));
   });
 });
 
@@ -302,7 +302,7 @@ describe("paid on-chain repair", () => {
 
     expect(
       simnet.callPublicFn("skate-gear-v1", "repair-skate", [Cl.uint(1)], player2).result,
-    ).toBeErr(Cl.uint(300));
+    ).toBeErr(Cl.uint(600));
 
     expect(
       simnet.callPublicFn(
@@ -346,7 +346,7 @@ describe("paid on-chain repair", () => {
     ).toBeUint(10000);
     expect(
       simnet.callPublicFn("skate-gear-v1", "repair-skate", [Cl.uint(1)], player1).result,
-    ).toBeErr(Cl.uint(308));
+    ).toBeErr(Cl.uint(608));
   });
 });
 
@@ -389,7 +389,7 @@ describe("owner and supply controls", () => {
         [Cl.buffer(new Uint8Array(32).fill(1))],
         deployer,
       ).result,
-    ).toBeErr(Cl.uint(114));
+    ).toBeErr(Cl.uint(714));
     expect(
       simnet.callPublicFn(
         "strike-duel-core-v1",
@@ -397,7 +397,7 @@ describe("owner and supply controls", () => {
         [Cl.buffer(new Uint8Array(33))],
         deployer,
       ).result,
-    ).toBeErr(Cl.uint(114));
+    ).toBeErr(Cl.uint(714));
     expect(
       simnet.callReadOnlyFn(
         "strike-duel-core-v1",
@@ -424,7 +424,7 @@ describe("owner and supply controls", () => {
         [],
         player1,
       ).result,
-    ).toBeErr(Cl.uint(100));
+    ).toBeErr(Cl.uint(700));
     expect(
       simnet.callPublicFn(
         "strike-duel-core-v1",
@@ -448,7 +448,7 @@ describe("owner and supply controls", () => {
         [Cl.bool(false)],
         deployer,
       ).result,
-    ).toBeErr(Cl.uint(100));
+    ).toBeErr(Cl.uint(700));
 
     expect(
       simnet.callPublicFn(
@@ -472,7 +472,7 @@ describe("owner and supply controls", () => {
         [Cl.uint(20000)],
         deployer,
       ).result,
-    ).toBeErr(Cl.uint(300));
+    ).toBeErr(Cl.uint(600));
   });
 
   it("prevents minter hijacking and direct public minting", () => {
@@ -483,12 +483,12 @@ describe("owner and supply controls", () => {
         [Cl.principal(player2)],
         player2,
       ).result,
-    ).toBeErr(Cl.uint(300));
+    ).toBeErr(Cl.uint(600));
 
     expect(
       simnet.callPublicFn("skate-gear-v1", "mint", [Cl.principal(player2)], player2)
         .result,
-    ).toBeErr(Cl.uint(300));
+    ).toBeErr(Cl.uint(600));
   });
 
   it("starts at 500 and permits owner adjustment only until freeze", () => {
@@ -506,7 +506,7 @@ describe("owner and supply controls", () => {
     expect(
       simnet.callPublicFn("skate-gear-v1", "set-max-supply", [Cl.uint(1000)], deployer)
         .result,
-    ).toBeErr(Cl.uint(305));
+    ).toBeErr(Cl.uint(605));
   });
 });
 });
