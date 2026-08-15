@@ -65,7 +65,7 @@ plan:
     - transaction-type: emulated-contract-publish
       contract-name: nft-trait
       emulated-sender: SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9
-      path: .cache\requirements\SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.clar
+      path: .cache/requirements/SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.clar
       clarity-version: 1
     epoch: '2.0'
   - id: 1
@@ -73,7 +73,7 @@ plan:
     - transaction-type: emulated-contract-publish
       contract-name: commission-trait
       emulated-sender: SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5
-      path: .cache\requirements\SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5.commission-trait.clar
+      path: .cache/requirements/SP2ESPYE74G94D2HD9X470426W1R6C2P22B4Z1Q5.commission-trait.clar
       clarity-version: 2
     epoch: '2.1'
   - id: 2
@@ -81,17 +81,17 @@ plan:
     - transaction-type: emulated-contract-publish
       contract-name: sbtc-registry
       emulated-sender: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4
-      path: .cache\requirements\SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-registry.clar
+      path: .cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-registry.clar
       clarity-version: 3
     - transaction-type: emulated-contract-publish
       contract-name: sbtc-token
       emulated-sender: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4
-      path: .cache\requirements\SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token.clar
+      path: .cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token.clar
       clarity-version: 3
     - transaction-type: emulated-contract-publish
       contract-name: sbtc-deposit
       emulated-sender: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4
-      path: .cache\requirements\SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-deposit.clar
+      path: .cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-deposit.clar
       clarity-version: 3
     epoch: '3.0'
   - id: 3
@@ -117,6 +117,11 @@ plan:
       path: contracts/rng-operator-v1.clar
       clarity-version: 4
     - transaction-type: emulated-contract-publish
+      contract-name: skate-gear-v1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/skate-gear-v1.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
       contract-name: soul-nft-v1
       emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       path: contracts/soul-nft-v1.clar
@@ -130,5 +135,10 @@ plan:
       contract-name: strike-core-v1-1
       emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
       path: contracts/strike-core-v1-1.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
+      contract-name: strike-duel-core-v1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/strike-duel-core-v1.clar
       clarity-version: 4
     epoch: '3.3'

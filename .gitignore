@@ -11,3 +11,4 @@ costs-reports.json
 deploy-testnet.mjs
 node_modules
 .vscode
+metadata/generated

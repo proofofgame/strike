@@ -49,6 +49,17 @@ path = "contracts/strike-core-v1-1.clar"
 clarity_version = 4
 epoch = '3.3'
 
+[contracts.skate-gear-v1]
+path = "contracts/skate-gear-v1.clar"
+clarity_version = 4
+epoch = '3.3'
+
+[contracts.strike-duel-core-v1]
+path = "contracts/strike-duel-core-v1.clar"
+clarity_version = 4
+epoch = '3.3'
+depends_on = ["skate-gear-v1"]
+
 [repl.analysis]
 passes = ['check_checker']
 

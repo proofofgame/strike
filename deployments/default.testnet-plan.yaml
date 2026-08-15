@@ -11,7 +11,7 @@ plan:
       expected-sender: ST3T54N6G4HN7GPBCYMSDKP4W00C45X19GNH7C0T6
       contract-name: strike-core-v1-1
       cost: 227100
-      path: contracts/strike-core-v1-1.testnet.clar
+      path: contracts/strike-core-v1-1.clar
       anchor-block-only: true
       clarity-version: 4
     epoch: '3.3'
