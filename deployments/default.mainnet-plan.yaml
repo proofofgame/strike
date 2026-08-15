@@ -8,24 +8,10 @@ plan:
   - id: 0
     transactions:
     - transaction-type: contract-publish
-      contract-name: raid-pass-v1
-      expected-sender: SP3T54N6G4HN7GPBCYMSDKP4W00C45X19GQ4VT13Y
-      cost: 477662
-      path: contracts/raid-pass-v1.clar
-      anchor-block-only: true
-      clarity-version: 4
-    - transaction-type: contract-publish
-      contract-name: soul-nft-v1
-      expected-sender: SP3T54N6G4HN7GPBCYMSDKP4W00C45X19GQ4VT13Y
-      cost: 477935
-      path: contracts/soul-nft-v1.clar
-      anchor-block-only: true
-      clarity-version: 4
-    - transaction-type: contract-publish
-      contract-name: strike-core-v1
+      contract-name: strike-core-v1-1
       expected-sender: SP3T54N6G4HN7GPBCYMSDKP4W00C45X19GQ4VT13Y
       cost: 479653
-      path: contracts/strike-core-v1.clar
+      path: contracts/strike-core-v1-1.clar
       anchor-block-only: true
       clarity-version: 4
     epoch: '3.3'
