@@ -8,10 +8,20 @@ plan:
   - id: 0
     transactions:
     - transaction-type: contract-publish
-      contract-name: strike-core-v1-1
+      contract-name: skate-gear-v1
       expected-sender: SP3T54N6G4HN7GPBCYMSDKP4W00C45X19GQ4VT13Y
-      cost: 479653
-      path: contracts/strike-core-v1-1.clar
+      cost: 642207
+      path: contracts/skate-gear-v1.clar
+      anchor-block-only: true
+      clarity-version: 4
+    epoch: '3.3'
+  - id: 1
+    transactions:
+    - transaction-type: contract-publish
+      contract-name: strike-duel-core-v1
+      expected-sender: SP3T54N6G4HN7GPBCYMSDKP4W00C45X19GQ4VT13Y
+      cost: 642244
+      path: contracts/strike-duel-core-v1.clar
       anchor-block-only: true
       clarity-version: 4
     epoch: '3.3'
