@@ -1,4 +1,4 @@
-name: Test Coverage
+name: Contract CI
 
 on:
   push:
@@ -23,16 +23,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests with coverage
-        run: npm run test:coverage
+      - name: Install Clarinet
+        run: |
+          curl -fsSL https://github.com/hirosystems/clarinet/releases/latest/download/clarinet-linux-x64.tar.gz -o clarinet.tar.gz
+          tar -xzf clarinet.tar.gz
+          sudo mv clarinet /usr/local/bin/
+          clarinet --version
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          disable_search: true
-          flags: unittests
-          name: codecov-strike
-          fail_ci_if_error: false
-          verbose: true
+      - name: Check contracts
+        run: clarinet check
+
+      - name: Run Vitest suite
+        run: npm test
