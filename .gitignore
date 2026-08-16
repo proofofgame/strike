@@ -11,7 +11,7 @@ costs-reports.json
 deploy-testnet.mjs
 node_modules
 .vscode
-duel-skate-rc1.canary-checklist.md
-duel-skate-rc1.mainnet-plan.yaml
+deployments/duel-skate-rc1.canary-checklist.md
+deployments/duel-skate-rc1.mainnet-plan.yaml
 metadata
 scripts
