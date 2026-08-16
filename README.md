@@ -1,6 +1,5 @@
 ﻿# Strike - NFT-Gated Gaming Platform
 
-[![codecov](https://codecov.io/gh/proofofgame/strike/branch/main/graph/badge.svg)](https://codecov.io/gh/proofofgame/strike)
 [![Tests](https://github.com/proofofgame/strike/actions/workflows/codecov.yml/badge.svg)](https://github.com/proofofgame/strike/actions/workflows/codecov.yml)
 
 A blockchain-based gaming platform built on Stacks, featuring NFT-gated access and session-based gameplay with STX and sBTC rewards.
