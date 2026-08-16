@@ -25,7 +25,9 @@ jobs:
 
       - name: Install Clarinet
         run: |
-          curl -fsSL https://github.com/hirosystems/clarinet/releases/latest/download/clarinet-linux-x64.tar.gz -o clarinet.tar.gz
+          curl -fsSL https://api.github.com/repos/stx-labs/clarinet/releases/latest \
+            | jq -r '.assets[] | select(.name == "clarinet-linux-x64-glibc.tar.gz") | .browser_download_url' \
+            | xargs -I{} curl -fsSL "{}" -o clarinet.tar.gz
           tar -xzf clarinet.tar.gz
           sudo mv clarinet /usr/local/bin/
           clarinet --version
