@@ -30,7 +30,7 @@ jobs:
         uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./lcov.info
+          files: ./coverage/lcov.info
           disable_search: true
           flags: unittests
           name: codecov-strike

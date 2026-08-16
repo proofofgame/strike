@@ -6,9 +6,9 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "c8 --reporter=lcov --reporter=text vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:report": "vitest run --coverage",
-    "test:ci": "vitest run --coverage -- --coverage --costs",
+    "test:ci": "vitest run --coverage",
     "metadata:generate": "node scripts/generate-metadata.mjs"
   },
   "devDependencies": {
